@@ -11,11 +11,15 @@ public class MatchaMover : MonoBehaviour
     }
 
     public float moveSpeed = 1f;
+    public AudioSource keySound;
 
     // Update is called once per frame
     void Update()
     {
         Vector3 moveVector = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        if (Input.GetKeyDown(KeyCode.RightArrow)) {
+            keySound.Play();
+        }
         transform.position += moveVector * moveSpeed;
     }
 }
