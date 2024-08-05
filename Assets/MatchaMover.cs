@@ -15,23 +15,7 @@ public class MatchaMover : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Vector3 moveVector = Vector3.zero;
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-        {
-            moveVector += new Vector3(0, 1);
-        }
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            moveVector += new Vector3(1, 0);
-        }
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            moveVector += new Vector3(1, -1);
-        }
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            moveVector += new Vector3(-1, 0);
-        }
+        Vector3 moveVector = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         transform.position += moveVector * moveSpeed;
     }
 }
