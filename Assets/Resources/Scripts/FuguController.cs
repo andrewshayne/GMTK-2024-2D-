@@ -80,6 +80,32 @@ public class FuguController : MonoBehaviour
         this.bottomLeftCoordinate = bottomLeftCoordinate;
         transform.localPosition = (Vector2)bottomLeftCoordinate;
     }
+    public void SetColor()
+    {
+        Color tint = Color.white;
+        switch (color)
+        {
+            case FuguColor.Red:
+                tint = Color.red;
+                break;
+            case FuguColor.Green:
+                tint = Color.green;
+                break;
+            case FuguColor.Purple:
+                tint = new Color(0.25f, 0.06f, 0.45f);
+                break;
+            case FuguColor.Pink:
+                tint = new Color(0.77f, 0.27f, 0.67f);
+                break;
+            case FuguColor.Cyan:
+                tint = Color.cyan;
+                break;
+            case FuguColor.Yellow:
+                tint = Color.yellow;
+                break;
+        }
+        transform.GetChild(0).GetComponent<SpriteRenderer>().color = tint;
+    }
 
     // Get all the cells this fugu is currently covering.
     public List<Vector2Int> GetAllCells()

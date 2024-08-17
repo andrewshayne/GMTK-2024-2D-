@@ -511,6 +511,7 @@ public class GridController : MonoBehaviour
         // Set the fugu's new position and scale.
         fugu.SetGridPosition(bottomLeftCoordinate);
         fugu.SetScale();
+        fugu.SetColor();
         List<Vector2Int> currentCells = fugu.GetAllCells();
         for (int i = 0; i < currentCells.Count; i++)
         {
