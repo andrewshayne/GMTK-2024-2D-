@@ -205,8 +205,8 @@ public class FuguController : MonoBehaviour
 
     public Vector2Int GetCenterCoord()
     {
-        int x = (2 * bottomLeftCoordinate.x + (int)scale) / 2;
-        int y = (2 * bottomLeftCoordinate.y + (int)scale) / 2;
+        int x = (2 * bottomLeftCoordinate.x + (int)scale - 1) / 2;
+        int y = (2 * bottomLeftCoordinate.y + (int)scale - 1) / 2;
         return new Vector2Int(x, y);
     }
 }

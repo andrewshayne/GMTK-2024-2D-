@@ -169,9 +169,13 @@ public struct FuguPair
     // Rotates the fugu pair and returns (primary.bottomLeftCoordinate, secondary.bottomLeftCoordinate)
     public KeyValuePair<Vector2Int, Vector2Int> Rotate(bool isClockwise)
     {
-        //Debug.Log($"Rotate CW: {isClockwise}");
-        //return RotateAroundPrimaryCenter(isClockwise);
-        return RotateAroundPairCenter(isClockwise);
+        if (primary.scale == secondary.scale)
+        {
+            return RotateAroundPairCenter(isClockwise);
+        } else
+        {
+            return RotateAroundPrimaryCenter(isClockwise);
+        }
     }
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
@@ -228,14 +232,14 @@ public struct FuguPair
 
         static Vector2Int RotatePointAroundPoint(Vector2Int rotationPoint, Vector2Int point, bool isClockwise)
         {
-            if (isClockwise)
+            if (!isClockwise)
             {
                 // Calculation: x = (point.x - rotationPoint.x)*cos(90) - (point.y - rotationPoint.y)*sin(90) + rotationPoint.x
                 // Simplifies to --> x = rotationPoint.y - point.y + rotationPoint.x
-                int x = (point.x - rotationPoint.x)*0 - (point.y - rotationPoint.y)*1 + rotationPoint.x;
+                int x = rotationPoint.y - point.y + rotationPoint.x;
                 // Calculation: y = (point.y - rotationPoint.y)*cos(90) + (point.x - rotationPoint.x)*sin(90) + rotationPoint.y
                 // Simplifies to --> y = point.x - rotationPoint.x + rotationPoint.y
-                int y = (point.y - rotationPoint.y)*0 + (point.x - rotationPoint.x)*1 + rotationPoint.y;
+                int y = point.x - rotationPoint.x + rotationPoint.y;
                 return new Vector2Int(x, y);
             } else
             {
@@ -574,14 +578,14 @@ public class GridController : MonoBehaviour
         // Check if new primary and secondary bottom left and top right are within the grid
         if (isOOB(primaryBottomLeft) || isOOB(primaryTopRight) || isOOB(secondaryBottomLeft) || isOOB(secondaryTopRight))
         {
-            Debug.Log("FuguPair new coords out of bounds");
+            Debug.Log($"FuguPair new coords out of bounds, primaryBottomLeft: {primaryBottomLeft}, primaryTopRight: {primaryTopRight}, secondaryBottomLeft: {secondaryBottomLeft}, secondaryTopRight: {secondaryTopRight}");
             return false;
         }
         
         // Check if any of the new primary coords are already occupied
-        for (int i = primaryBottomLeft.x; i <= primaryTopRight.x; i++)
+        for (int i = primaryBottomLeft.x; i < primaryTopRight.x; i++)
         {
-            for (int j = primaryBottomLeft.y; j <= primaryTopRight.y; j++)
+            for (int j = primaryBottomLeft.y; j < primaryTopRight.y; j++)
             {
                 if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.primary.id && grid[i][j] != ActiveFreefallPair.secondary.id)
                 {
@@ -592,9 +596,9 @@ public class GridController : MonoBehaviour
         }
 
         // Check if any of the new secondary coords are already occupied
-        for (int i = secondaryBottomLeft.x; i <= secondaryTopRight.x; i++)
+        for (int i = secondaryBottomLeft.x; i < secondaryTopRight.x; i++)
         {
-            for (int j = secondaryBottomLeft.y; j <= secondaryTopRight.y; j++)
+            for (int j = secondaryBottomLeft.y; j < secondaryTopRight.y; j++)
             {
                 if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.secondary.id && grid[i][j] != ActiveFreefallPair.primary.id)
                 {
