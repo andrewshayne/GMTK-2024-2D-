@@ -538,8 +538,10 @@ public class GridController : MonoBehaviour
         Vector2Int secondaryTopRight = new Vector2Int(secondaryBottomLeft.x + secondaryScale, secondaryBottomLeft.y + secondaryScale);
         
         // Check if new primary and secondary top right is within the grid
-        if (primaryTopRight.x >= GRID_SIZE || primaryTopRight.y >= GRID_SIZE) return false;
-        if (secondaryTopRight.x >= GRID_SIZE || secondaryTopRight.y >= GRID_SIZE) return false;
+        if (isOOB(primaryTopRight) || isOOB(secondaryTopRight))
+        {
+            return false;
+        }
         
         // Check if any of the new primary coords are already occupied
         for (int i = primaryBottomLeft.x; i <= primaryTopRight.x; i++)
