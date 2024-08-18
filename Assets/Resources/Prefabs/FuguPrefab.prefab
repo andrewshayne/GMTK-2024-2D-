@@ -53,6 +53,7 @@ MonoBehaviour:
   scale: 1
   relativePosition: 0
   image: {fileID: 1394312216194896800}
+  animator: {fileID: 4696789527038190559}
 --- !u!1 &5496051521052688341
 GameObject:
   m_ObjectHideFlags: 0

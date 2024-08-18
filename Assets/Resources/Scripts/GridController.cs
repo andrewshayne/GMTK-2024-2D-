@@ -256,10 +256,10 @@ public struct FuguPair
 
 public class GridController : MonoBehaviour
 {
-    Vector2Int GRID_SIZE = new Vector2Int(12, 12);
+    Vector2Int GRID_SIZE = new Vector2Int(14, 16);
 
     private int currentID = 0;
-    private Vector2Int defaultSpawnPosition = new Vector2Int(5, 11);
+    private Vector2Int defaultSpawnPosition = new Vector2Int(6, 15);
 
     private float gravityTickTimer = 0.0f;
     public float freeFallTickPeriod = 2.0f;
@@ -272,6 +272,7 @@ public class GridController : MonoBehaviour
     public Queue<FuguPair> fuguQueue = new Queue<FuguPair>();
     public Dictionary<int, FuguController> fuguDict = new Dictionary<int, FuguController>();
     public GameObject FuguPrefab;
+    public GameObject DebuggingSquare;
 
     int GetUniqueID()
     {
@@ -301,7 +302,9 @@ public class GridController : MonoBehaviour
         // load grid from file or something...
         InitGrid();
         InitQueue();
-        
+
+        // Debugging
+        InitDebuggingGrid();
     }
 
     void InitGrid()
@@ -449,12 +452,31 @@ public class GridController : MonoBehaviour
             }
             if (isValid)
             {
+                DesperateFuguGridCleanup(ActiveFreefallPair.primary.id);
+                DesperateFuguGridCleanup(ActiveFreefallPair.secondary.id);
+
                 PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate);
                 PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate);
             }
         }
 
         return ActionInput.NoAction;
+    }
+
+    // Call this function if you just need to wipe the grid of a specific fugu id.
+    // It scans the whole grid but who cares. I just want to clear this id.
+    void DesperateFuguGridCleanup(int id)
+    {
+        for (int i = 0; i < GRID_SIZE.x; i++)
+        {
+            for (int j = 0; j < GRID_SIZE.y; j++)
+            {
+                if (grid[i][j] == id)
+                {
+                    grid[i][j] = -1;
+                }
+            }
+        }
     }
 
     void HandlePlayerInput()
@@ -652,6 +674,8 @@ public class GridController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        DebuggingRenderGrid();
+
         if (isPlayerLocked)
         {
             return;
@@ -749,10 +773,8 @@ public class GridController : MonoBehaviour
         PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + Vector2Int.down);
     }
 
-    private void PlaceFuguInGrid(FuguController fugu, Vector2Int bottomLeftCoordinate)
+    private void ClearPreviousFuguPosition(FuguController fugu, Vector2Int bottomLeftCoordinate)
     {
-        // If the fugu was previously in the grid, clear its id from previous cells.
-
         // Place the fugu's id in the current cells.
         List<Vector2Int> previousCells = fugu.GetAllCells();
         for (int i = 0; i < previousCells.Count; i++)
@@ -764,6 +786,12 @@ public class GridController : MonoBehaviour
                 grid[previousCells[i].x][previousCells[i].y] = -1;
             }
         }
+    }
+
+    private void PlaceFuguInGrid(FuguController fugu, Vector2Int bottomLeftCoordinate)
+    {
+        // If the fugu was previously in the grid, clear its id from previous cells.
+        ClearPreviousFuguPosition(fugu, bottomLeftCoordinate);
 
         // Set the fugu's new position and scale.
         fugu.SetGridPosition(bottomLeftCoordinate);
@@ -987,4 +1015,44 @@ public class GridController : MonoBehaviour
         fugu.ExplodeSelf();
     }
 
+
+    // Debugging fugu / cell tool.
+    private bool enableDebuggingGrid = true;
+    private List<List<GameObject>> debuggingGrid;
+    void InitDebuggingGrid()
+    {
+        if (!enableDebuggingGrid)
+        {
+            return;
+        }
+        debuggingGrid = new List<List<GameObject>>();
+        for (int i = 0; i < GRID_SIZE.x; i++)
+        {
+            debuggingGrid.Add(new List<GameObject>());
+            for (int j = 0; j < GRID_SIZE.y; j++)
+            {
+                debuggingGrid[i].Add(GameObject.Instantiate(DebuggingSquare));
+                debuggingGrid[i][j].transform.localPosition = new Vector2(i, j) + (Vector2.one * 0.5f);
+            }
+        }
+    }
+
+    void DebuggingRenderGrid ()
+    {
+        if (!enableDebuggingGrid)
+        {
+            return;
+        }
+        if (debuggingGrid.Count == GRID_SIZE.x && debuggingGrid[0].Count == GRID_SIZE.y)
+        {
+            for (int i = 0; i < GRID_SIZE.x; i++)
+            {
+                for (int j = 0; j < GRID_SIZE.y; j++)
+                {
+                    bool isActive = grid[i][j] != -1;
+                    debuggingGrid[i][j].SetActive(isActive);
+                }
+            }
+        }
+    }
 }
