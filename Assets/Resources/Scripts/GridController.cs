@@ -43,7 +43,7 @@ public struct FuguPair
         secondary = secondaryObj.GetComponent<FuguController>();
 
         SetUpFuguController(primary, true, id1, id2, position + (Vector2Int.down * 2), primaryColor);
-        SetUpFuguController(secondary, true, id2, id1, position, secondaryColor);
+        SetUpFuguController(secondary, false, id2, id1, position, secondaryColor);
     }
 
     public void SetUpFuguController(FuguController fugu, bool isPrimary, int id, int partnerId, Vector2Int topLeftCoordinate, FuguColor color)
@@ -154,10 +154,10 @@ public struct FuguPair
     {
         if (isClockwise)
         {
-            return (RelativePosition)((((int)relativePosition + 1) % 4));
+            return (RelativePosition)((((int)relativePosition + 1) % 4 + 4) %4);
         } else
         {
-            return (RelativePosition)((((int)relativePosition - 1) % 4));
+            return (RelativePosition)((((int)relativePosition - 1) % 4 + 4) %4);
         }
     }
 }
@@ -279,19 +279,19 @@ public class GridController : MonoBehaviour
 
     ActionInput GetPlayerActionInput()
     {
-        if (Input.GetKey(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.E))
         {
             return ActionInput.RotateCW;
         }
-        if (Input.GetKey(KeyCode.Q))
+        if (Input.GetKeyDown(KeyCode.Q))
         {
             return ActionInput.RotateCCW;
         }
-        if (Input.GetKey(KeyCode.Z))
+        if (Input.GetKeyDown(KeyCode.Z))
         {
             return ActionInput.InflatePrimary;
         }
-        if (Input.GetKey(KeyCode.C))
+        if (Input.GetKeyDown(KeyCode.C))
         {
             return ActionInput.InflateSecondary;
         }
