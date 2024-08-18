@@ -248,7 +248,7 @@ public struct FuguPair
 
 public class GridController : MonoBehaviour
 {
-    Vector2Int GRID_SIZE = new Vector2Int(14, 12);
+    Vector2Int GRID_SIZE = new Vector2Int(12, 12);
 
     private int currentID = 0;
     private Vector2Int defaultSpawnPosition = new Vector2Int(5, 11);
@@ -526,19 +526,15 @@ public class GridController : MonoBehaviour
     }
 
     private bool CanMoveFuguPairToCoords(Vector2Int primaryBottomLeft, Vector2Int secondaryBottomLeft) 
-    {
-        // Check if new primary and secondary bottom left is within the grid
-        if (primaryBottomLeft.x < 0 || primaryBottomLeft.y < 0) return false;
-        if (secondaryBottomLeft.x < 0 || secondaryBottomLeft.y < 0) return false;
-        
+    {        
         int primaryScale = (int)ActiveFreefallPair.primary.scale;
         int secondaryScale = (int)ActiveFreefallPair.secondary.scale;
         
         Vector2Int primaryTopRight = new Vector2Int(primaryBottomLeft.x + primaryScale, primaryBottomLeft.y + primaryScale);
         Vector2Int secondaryTopRight = new Vector2Int(secondaryBottomLeft.x + secondaryScale, secondaryBottomLeft.y + secondaryScale);
         
-        // Check if new primary and secondary top right is within the grid
-        if (isOOB(primaryTopRight) || isOOB(secondaryTopRight))
+        // Check if new primary and secondary bottom left and top right are within the grid
+        if (isOOB(primaryBottomLeft) || isOOB(primaryTopRight) || isOOB(secondaryBottomLeft) || isOOB(secondaryTopRight))
         {
             return false;
         }
