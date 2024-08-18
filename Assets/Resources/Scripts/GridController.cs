@@ -100,20 +100,20 @@ public struct FuguPair
             switch (primary.relativePosition)
             {
                 case RelativePosition.Up:
-                    // Move the secondary right 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up;
+                    // Shift primary bottom left coordinate left
+                    primary.bottomLeftCoordinate += Vector2Int.left;
                     break;
                 case RelativePosition.Right:
-                    // Move the secondary up 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up;
+                    // Shift primary bottom left coordinate down one
+                    primary.bottomLeftCoordinate += Vector2Int.down;
                     break;
                 case RelativePosition.Down:
-                    // Move the secondary up 1, right 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up + Vector2Int.right;
+                    // Shift primary down 1, left 1
+                    primary.bottomLeftCoordinate += Vector2Int.down + Vector2Int.left;
                     break;
                 case RelativePosition.Left:
-                    // Move the secondary up 1, right 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up + Vector2Int.right;
+                    // Shift primary down 1, left 1
+                    primary.bottomLeftCoordinate += Vector2Int.down + Vector2Int.left;
                     break;
             }
             return true;
@@ -174,17 +174,27 @@ public struct FuguPair
             return RotateAroundPairCenter(isClockwise);
         } else
         {
-            return RotateAroundPrimaryCenter(isClockwise);
+            return RotateAroundBigFuguCenter(isClockwise);
         }
     }
 
-    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
+    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundBigFuguCenter(bool isClockwise)
     {
-        Vector2Int primaryCenter = primary.GetCenterCoord();
+        if (primary.scale > secondary.scale)
+        {
+            Vector2Int primaryCenter = primary.GetCenterCoord();
 
-        Vector2Int newSecondaryBottomLeftCoordinate = RotatePointAroundPoint(primaryCenter, secondary.bottomLeftCoordinate, isClockwise);
+            Vector2Int newSecondaryBottomLeftCoordinate = RotatePointAroundPoint(primaryCenter, secondary.bottomLeftCoordinate, isClockwise);
 
-        return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
+            return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
+        } else
+        {
+            Vector2Int secondaryCenter = secondary.GetCenterCoord();
+
+            Vector2Int newPrimaryBottomLeftCoordinate = RotatePointAroundPoint(secondaryCenter, primary.bottomLeftCoordinate, isClockwise);
+
+            return new KeyValuePair<Vector2Int, Vector2Int>(newPrimaryBottomLeftCoordinate, secondary.bottomLeftCoordinate);
+        }
     }
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPairCenter(bool isClockwise)
