@@ -202,4 +202,11 @@ public class FuguController : MonoBehaviour
         yield return new WaitForSeconds(ExplosionDelay);
         Destroy(gameObject);
     }
+
+    public Vector2Int GetCenterCoord()
+    {
+        int x = (2 * bottomLeftCoordinate.x + (int)scale) / 2;
+        int y = (2 * bottomLeftCoordinate.y + (int)scale) / 2;
+        return new Vector2Int(x, y);
+    }
 }
