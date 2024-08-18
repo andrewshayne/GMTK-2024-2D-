@@ -39,6 +39,8 @@ public class FuguController : MonoBehaviour
     public RelativePosition relativePosition;
     public SpriteRenderer image;
 
+    public Animator animator;
+
     /*
     public FuguController(bool isPrimary, int id, int partnerId, Vector2Int topLeftCoordinate, FuguColor color)
     {
@@ -68,12 +70,19 @@ public class FuguController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
- 
+        // Self-manage rotation...
+        // UNLESS we have a better setter to do this in.
+        transform.GetChild(0).localRotation = Quaternion.Euler(0, 0, -90 * (int)relativePosition + 90);
     }
 
     public void SetScale()
     {
-        transform.localScale = new Vector3((int)scale, (int)scale);
+        // ALWAYS
+        //transform.localScale = new Vector3(0.5f, 0.5f);
+
+        int scaleInt = (int)scale;
+        animator.SetInteger("FuguScale", scaleInt);
+        transform.GetChild(0).localPosition = new Vector2(0.5f, 0.5f) * scaleInt;
     }
     public void SetGridPosition(Vector2Int bottomLeftCoordinate)
     {

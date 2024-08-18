@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Fugu Idle
+  m_Name: Fugu Kiss 1
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -21,13 +21,9 @@ AnimationClip:
   - serializedVersion: 2
     curve:
     - time: 0
-      value: {fileID: 21300000, guid: 8c301340fe962a94fa193901d60cc35d, type: 3}
+      value: {fileID: 21300000, guid: ccc82f667d73f114ab38f25c0efc2846, type: 3}
     - time: 0.33333334
-      value: {fileID: 21300000, guid: 857ee6feecfeeb74783f2c3e06cc63de, type: 3}
-    - time: 0.6666667
-      value: {fileID: 21300000, guid: 8c301340fe962a94fa193901d60cc35d, type: 3}
-    - time: 1
-      value: {fileID: 21300000, guid: 5e5460d0fa0216f4b8e58d91b7342a5e, type: 3}
+      value: {fileID: 21300000, guid: 18f659bc4e6f4f744b87f3cfd8c93d2d, type: 3}
     attribute: m_Sprite
     path: 
     classID: 212
@@ -50,16 +46,14 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     pptrCurveMapping:
-    - {fileID: 21300000, guid: 8c301340fe962a94fa193901d60cc35d, type: 3}
-    - {fileID: 21300000, guid: 857ee6feecfeeb74783f2c3e06cc63de, type: 3}
-    - {fileID: 21300000, guid: 8c301340fe962a94fa193901d60cc35d, type: 3}
-    - {fileID: 21300000, guid: 5e5460d0fa0216f4b8e58d91b7342a5e, type: 3}
+    - {fileID: 21300000, guid: ccc82f667d73f114ab38f25c0efc2846, type: 3}
+    - {fileID: 21300000, guid: 18f659bc4e6f4f744b87f3cfd8c93d2d, type: 3}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 1.3333334
+    m_StopTime: 0.6666667
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
