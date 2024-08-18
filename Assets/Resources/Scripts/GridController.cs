@@ -169,8 +169,13 @@ public struct FuguPair
     // Rotates the fugu pair and returns (primary.bottomLeftCoordinate, secondary.bottomLeftCoordinate)
     public KeyValuePair<Vector2Int, Vector2Int> Rotate(bool isClockwise)
     {
-        //Debug.Log($"Rotate CW: {isClockwise}");
-        return RotateAroundPrimaryCenter(isClockwise);
+        if (primary.scale == secondary.scale)
+        {
+            return RotateAroundPairCenter(isClockwise);
+        } else
+        {
+            return RotateAroundPrimaryCenter(isClockwise);
+        }
     }
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
@@ -218,8 +223,45 @@ public struct FuguPair
         return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
     }
 
-    private void RotateAroundPairCenter(bool isClockwise)
+    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPairCenter(bool isClockwise)
     {
+        static Vector2Int GetCenter(Vector2Int pointA, Vector2Int pointB)
+        {
+            return new Vector2Int((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
+        }
+
+        static Vector2Int RotatePointAroundPoint(Vector2Int rotationPoint, Vector2Int point, bool isClockwise)
+        {
+            if (!isClockwise)
+            {
+                // Calculation: x = (point.x - rotationPoint.x)*cos(90) - (point.y - rotationPoint.y)*sin(90) + rotationPoint.x
+                // Simplifies to --> x = rotationPoint.y - point.y + rotationPoint.x
+                int x = rotationPoint.y - point.y + rotationPoint.x;
+                // Calculation: y = (point.y - rotationPoint.y)*cos(90) + (point.x - rotationPoint.x)*sin(90) + rotationPoint.y
+                // Simplifies to --> y = point.x - rotationPoint.x + rotationPoint.y
+                int y = point.x - rotationPoint.x + rotationPoint.y;
+                return new Vector2Int(x, y);
+            } else
+            {
+                // Calculation: x = (point.x - rotationPoint.x)*cos(-90) - (point.y - rotationPoint.y)*sin(-90) + rotationPoint.x
+                // Simplifies to --> x = point.y - rotationPoint.y + rotationPoint.x
+                int x = point.y - rotationPoint.y + rotationPoint.x;
+                // Calculation: y = (point.y - rotationPoint.y)*cos(-90) + (point.x - rotationPoint.x)*sin(-90) + rotationPoint.y
+                // Simplifies to --> x = rotationPoint.x - point.x + rotationPoint.y
+                int y = rotationPoint.x - point.x + rotationPoint.y;
+                return new Vector2Int(x, y);
+            }
+        }
+        Debug.Log($"primary Scale: {primary.scale}, secondary Scale: {secondary.scale}");
+        Vector2Int primaryCenter = primary.GetCenterCoord();
+        Vector2Int secondaryCenter = secondary.GetCenterCoord();
+        Vector2Int rotationPoint = GetCenter(primaryCenter, secondaryCenter);
+        Vector2Int newPrimaryBottomLeft = RotatePointAroundPoint(rotationPoint, primary.bottomLeftCoordinate, isClockwise);
+        Vector2Int newSecondaryBottomLeft = RotatePointAroundPoint(rotationPoint, secondary.bottomLeftCoordinate, isClockwise);
+        Debug.Log($"isClockwise: {isClockwise}, primaryCenter: {primaryCenter}, secondaryCenter: {secondaryCenter}");
+        Debug.Log($"rotationPoint: {rotationPoint}, primaryBLC: {primary.bottomLeftCoordinate}, secondaryBLC: {secondary.bottomLeftCoordinate}");
+        Debug.Log($"newPrimaryBLC: {newPrimaryBottomLeft}, newSecondaryBLC: {newSecondaryBottomLeft}");
+        return new KeyValuePair<Vector2Int, Vector2Int>(newPrimaryBottomLeft, newSecondaryBottomLeft);
     }
 
     // Updates the relative positions of the primary and secondary Fugus based on rotations
@@ -548,38 +590,43 @@ public class GridController : MonoBehaviour
     }
 
     private bool CanMoveFuguPairToCoords(Vector2Int primaryBottomLeft, Vector2Int secondaryBottomLeft) 
-    {
-        // Check if new primary and secondary bottom left is within the grid
-        if (primaryBottomLeft.x < 0 || primaryBottomLeft.y < 0) return false;
-        if (secondaryBottomLeft.x < 0 || secondaryBottomLeft.y < 0) return false;
-        
+    {        
         int primaryScale = (int)ActiveFreefallPair.primary.scale;
         int secondaryScale = (int)ActiveFreefallPair.secondary.scale;
         
         Vector2Int primaryTopRight = new Vector2Int(primaryBottomLeft.x + primaryScale, primaryBottomLeft.y + primaryScale);
         Vector2Int secondaryTopRight = new Vector2Int(secondaryBottomLeft.x + secondaryScale, secondaryBottomLeft.y + secondaryScale);
         
-        // Check if new primary and secondary top right is within the grid
-        if (isOOB(primaryTopRight) || isOOB(secondaryTopRight))
+        // Check if new primary and secondary bottom left and top right are within the grid
+        if (isOOB(primaryBottomLeft) || isOOB(primaryTopRight) || isOOB(secondaryBottomLeft) || isOOB(secondaryTopRight))
         {
+            Debug.Log($"FuguPair new coords out of bounds, primaryBottomLeft: {primaryBottomLeft}, primaryTopRight: {primaryTopRight}, secondaryBottomLeft: {secondaryBottomLeft}, secondaryTopRight: {secondaryTopRight}");
             return false;
         }
         
         // Check if any of the new primary coords are already occupied
-        for (int i = primaryBottomLeft.x; i <= primaryTopRight.x; i++)
+        for (int i = primaryBottomLeft.x; i < primaryTopRight.x; i++)
         {
-            for (int j = primaryBottomLeft.y; j <= primaryTopRight.y; j++)
+            for (int j = primaryBottomLeft.y; j < primaryTopRight.y; j++)
             {
-                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.primary.id && grid[i][j] != ActiveFreefallPair.secondary.id) return false;
+                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.primary.id && grid[i][j] != ActiveFreefallPair.secondary.id)
+                {
+                    Debug.Log($"FuguPair primary (id: {ActiveFreefallPair.primary.id} new coords collision with id {grid[i][j]}");
+                    return false;
+                }
             }
         }
 
         // Check if any of the new secondary coords are already occupied
-        for (int i = secondaryBottomLeft.x; i <= secondaryTopRight.x; i++)
+        for (int i = secondaryBottomLeft.x; i < secondaryTopRight.x; i++)
         {
-            for (int j = secondaryBottomLeft.y; j <= secondaryTopRight.y; j++)
+            for (int j = secondaryBottomLeft.y; j < secondaryTopRight.y; j++)
             {
-                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.secondary.id && grid[i][j] != ActiveFreefallPair.primary.id) return false;
+                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.secondary.id && grid[i][j] != ActiveFreefallPair.primary.id)
+                {
+                    Debug.Log($"FuguPair secondary (id: {ActiveFreefallPair.secondary.id} new coords collision with id {grid[i][j]}");
+                    return false;
+                }
             }
         }
         return true;
