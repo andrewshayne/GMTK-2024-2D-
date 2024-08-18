@@ -70,12 +70,14 @@ public class FuguController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Self-manage rotation...
-        // UNLESS we have a better setter to do this in.
+    }
+
+    public void SetRotationVisuals()
+    {
         transform.GetChild(0).localRotation = Quaternion.Euler(0, 0, -90 * (int)relativePosition + 90);
     }
 
-    public void SetScale()
+    public void SetScaleVisuals()
     {
         // ALWAYS
         //transform.localScale = new Vector3(0.5f, 0.5f);
@@ -89,7 +91,7 @@ public class FuguController : MonoBehaviour
         this.bottomLeftCoordinate = bottomLeftCoordinate;
         transform.localPosition = (Vector2)bottomLeftCoordinate;
     }
-    public void SetColor()
+    public void SetColorVisuals()
     {
         Color tint = Color.white;
         switch (color)

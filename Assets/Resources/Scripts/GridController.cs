@@ -94,8 +94,8 @@ public struct FuguPair
             primary.scale++;
             secondary.scale--;
 
-            primary.SetScale();
-            secondary.SetScale();
+            primary.SetScaleVisuals();
+            secondary.SetScaleVisuals();
 
             switch (primary.relativePosition)
             {
@@ -134,8 +134,8 @@ public struct FuguPair
             primary.scale--;
             secondary.scale++;
 
-            primary.SetScale();
-            secondary.SetScale();
+            primary.SetScaleVisuals();
+            secondary.SetScaleVisuals();
 
             switch (secondary.relativePosition)
             {
@@ -795,8 +795,10 @@ public class GridController : MonoBehaviour
 
         // Set the fugu's new position and scale.
         fugu.SetGridPosition(bottomLeftCoordinate);
-        fugu.SetScale();
-        fugu.SetColor();
+        fugu.SetScaleVisuals();
+        fugu.SetColorVisuals();
+        fugu.SetRotationVisuals();
+
         List<Vector2Int> currentCells = fugu.GetAllCells();
         for (int i = 0; i < currentCells.Count; i++)
         {
