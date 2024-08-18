@@ -180,87 +180,24 @@ public struct FuguPair
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
     {
-        static Vector2Int GetNewSecondaryBottomLeftCoordinate(
-            FuguController primary,
-            FuguController secondary,
-            RelativePosition newSecondaryRelativePosition
-            )
-        {
-            if (newSecondaryRelativePosition == RelativePosition.Up)
-            {
-                return new Vector2Int(
-                        primary.bottomLeftCoordinate.x,
-                        primary.bottomLeftCoordinate.y + (int)primary.scale
-                        );
-            }
-            else if (newSecondaryRelativePosition == RelativePosition.Right)
-            {
-                return new Vector2Int(
-                        primary.bottomLeftCoordinate.x + (int)primary.scale,
-                        primary.bottomLeftCoordinate.y
-                        );
-            }
-            else if (newSecondaryRelativePosition == RelativePosition.Down)
-            {
-                return new Vector2Int(
-                        primary.bottomLeftCoordinate.x,
-                        primary.bottomLeftCoordinate.y - (int)secondary.scale
-                        );
-            }
-            else
-            {
-                return new Vector2Int(
-                        primary.bottomLeftCoordinate.x - (int)secondary.scale,
-                        primary.bottomLeftCoordinate.y
-                        );
-            }
-        }
+        Vector2Int primaryCenter = primary.GetCenterCoord();
 
-        RelativePosition newSecondaryRelativePosition = RotateRelativePosition(secondary.relativePosition, isClockwise);
-
-        Vector2Int newSecondaryBottomLeftCoordinate = GetNewSecondaryBottomLeftCoordinate(primary, secondary, newSecondaryRelativePosition);
+        Vector2Int newSecondaryBottomLeftCoordinate = RotatePointAroundPoint(primaryCenter, secondary.bottomLeftCoordinate, isClockwise);
 
         return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
     }
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPairCenter(bool isClockwise)
     {
-        static Vector2Int GetCenter(Vector2Int pointA, Vector2Int pointB)
-        {
-            return new Vector2Int((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
-        }
-
-        static Vector2Int RotatePointAroundPoint(Vector2Int rotationPoint, Vector2Int point, bool isClockwise)
-        {
-            if (!isClockwise)
-            {
-                // Calculation: x = (point.x - rotationPoint.x)*cos(90) - (point.y - rotationPoint.y)*sin(90) + rotationPoint.x
-                // Simplifies to --> x = rotationPoint.y - point.y + rotationPoint.x
-                int x = rotationPoint.y - point.y + rotationPoint.x;
-                // Calculation: y = (point.y - rotationPoint.y)*cos(90) + (point.x - rotationPoint.x)*sin(90) + rotationPoint.y
-                // Simplifies to --> y = point.x - rotationPoint.x + rotationPoint.y
-                int y = point.x - rotationPoint.x + rotationPoint.y;
-                return new Vector2Int(x, y);
-            } else
-            {
-                // Calculation: x = (point.x - rotationPoint.x)*cos(-90) - (point.y - rotationPoint.y)*sin(-90) + rotationPoint.x
-                // Simplifies to --> x = point.y - rotationPoint.y + rotationPoint.x
-                int x = point.y - rotationPoint.y + rotationPoint.x;
-                // Calculation: y = (point.y - rotationPoint.y)*cos(-90) + (point.x - rotationPoint.x)*sin(-90) + rotationPoint.y
-                // Simplifies to --> x = rotationPoint.x - point.x + rotationPoint.y
-                int y = rotationPoint.x - point.x + rotationPoint.y;
-                return new Vector2Int(x, y);
-            }
-        }
-        Debug.Log($"primary Scale: {primary.scale}, secondary Scale: {secondary.scale}");
+        //Debug.Log($"primary Scale: {primary.scale}, secondary Scale: {secondary.scale}");
         Vector2Int primaryCenter = primary.GetCenterCoord();
         Vector2Int secondaryCenter = secondary.GetCenterCoord();
         Vector2Int rotationPoint = GetCenter(primaryCenter, secondaryCenter);
         Vector2Int newPrimaryBottomLeft = RotatePointAroundPoint(rotationPoint, primary.bottomLeftCoordinate, isClockwise);
         Vector2Int newSecondaryBottomLeft = RotatePointAroundPoint(rotationPoint, secondary.bottomLeftCoordinate, isClockwise);
-        Debug.Log($"isClockwise: {isClockwise}, primaryCenter: {primaryCenter}, secondaryCenter: {secondaryCenter}");
-        Debug.Log($"rotationPoint: {rotationPoint}, primaryBLC: {primary.bottomLeftCoordinate}, secondaryBLC: {secondary.bottomLeftCoordinate}");
-        Debug.Log($"newPrimaryBLC: {newPrimaryBottomLeft}, newSecondaryBLC: {newSecondaryBottomLeft}");
+        //Debug.Log($"isClockwise: {isClockwise}, primaryCenter: {primaryCenter}, secondaryCenter: {secondaryCenter}");
+        //Debug.Log($"rotationPoint: {rotationPoint}, primaryBLC: {primary.bottomLeftCoordinate}, secondaryBLC: {secondary.bottomLeftCoordinate}");
+        //Debug.Log($"newPrimaryBLC: {newPrimaryBottomLeft}, newSecondaryBLC: {newSecondaryBottomLeft}");
         return new KeyValuePair<Vector2Int, Vector2Int>(newPrimaryBottomLeft, newSecondaryBottomLeft);
     }
 
@@ -282,6 +219,35 @@ public struct FuguPair
         } else
         {
             return (RelativePosition)((((int)relativePosition - 1) % 4 + 4) %4);
+        }
+    }
+
+    private Vector2Int GetCenter(Vector2Int pointA, Vector2Int pointB)
+    {
+        return new Vector2Int((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
+    }
+
+    private Vector2Int RotatePointAroundPoint(Vector2Int rotationPoint, Vector2Int point, bool isClockwise)
+    {
+        if (!isClockwise)
+        {
+            // Calculation: x = (point.x - rotationPoint.x)*cos(90) - (point.y - rotationPoint.y)*sin(90) + rotationPoint.x
+            // Simplifies to --> x = rotationPoint.y - point.y + rotationPoint.x
+            int x = rotationPoint.y - point.y + rotationPoint.x;
+            // Calculation: y = (point.y - rotationPoint.y)*cos(90) + (point.x - rotationPoint.x)*sin(90) + rotationPoint.y
+            // Simplifies to --> y = point.x - rotationPoint.x + rotationPoint.y
+            int y = point.x - rotationPoint.x + rotationPoint.y;
+            return new Vector2Int(x, y);
+        }
+        else
+        {
+            // Calculation: x = (point.x - rotationPoint.x)*cos(-90) - (point.y - rotationPoint.y)*sin(-90) + rotationPoint.x
+            // Simplifies to --> x = point.y - rotationPoint.y + rotationPoint.x
+            int x = point.y - rotationPoint.y + rotationPoint.x;
+            // Calculation: y = (point.y - rotationPoint.y)*cos(-90) + (point.x - rotationPoint.x)*sin(-90) + rotationPoint.y
+            // Simplifies to --> x = rotationPoint.x - point.x + rotationPoint.y
+            int y = rotationPoint.x - point.x + rotationPoint.y;
+            return new Vector2Int(x, y);
         }
     }
 }
