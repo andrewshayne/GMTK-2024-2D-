@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 
 
@@ -41,7 +42,7 @@ public struct FuguPair
         secondary = secondaryObj.GetComponent<FuguController>();
 
         SetUpFuguController(primary, true, id1, id2, position + (Vector2Int.down * 2), primaryColor);
-        SetUpFuguController(secondary, true, id2, id1, position, secondaryColor);
+        SetUpFuguController(secondary, false, id2, id1, position, secondaryColor);
     }
 
     public void SetUpFuguController(FuguController fugu, bool isPrimary, int id, int partnerId, Vector2Int topLeftCoordinate, FuguColor color)
@@ -81,7 +82,7 @@ public struct FuguPair
     }
 
     // Inflate the primary fugu, deflate the secondary.
-    public void InflatePrimary()
+    public bool InflatePrimary()
     {
         // Inflate if it's smaller than a large fugu.
         if (primary.scale < FuguScale.Large)
@@ -91,33 +92,73 @@ public struct FuguPair
 
             primary.SetScale();
             secondary.SetScale();
+
+            switch (primary.relativePosition)
+            {
+                case RelativePosition.Up:
+                    // Move the secondary right 1
+                    secondary.bottomLeftCoordinate += Vector2Int.up;
+                    break;
+                case RelativePosition.Right:
+                    // Move the secondary up 1
+                    secondary.bottomLeftCoordinate += Vector2Int.up;
+                    break;
+                case RelativePosition.Down:
+                    // Move the secondary up 1, right 1
+                    secondary.bottomLeftCoordinate += Vector2Int.up + Vector2Int.right;
+                    break;
+                case RelativePosition.Left:
+                    // Move the secondary up 1, right 1
+                    secondary.bottomLeftCoordinate += Vector2Int.up + Vector2Int.right;
+                    break;
+            }
+            return true;
         }
         else
         {
             // Play a sound indicating this action is unavailable.
+            return false;
         }
     }
 
     // Inflate the secondary fugu, deflate the secondary.
-    // If the secondary becomes larger than the primary, promote it to primary and update the pair's coordinate to match the new primary.
-    public void InflateSecondary()
+    public bool InflateSecondary()
     {
-        // ALWAYS inflate. Secondary should always be equal size or smaller than the primary.
-        // Small -> Medium: Do nothing else.
-        // Medium -> Large: Set as new pivot point.
-
-        primary.scale--;
-        secondary.scale++;
-
-        primary.SetScale();
-        secondary.SetScale();
-
-        // Promote secondary to primary if it's larger now.
-        if (secondary.scale > primary.scale)
+        // Inflate if it's smaller than a large fugu.
+        if (secondary.scale < FuguScale.Large)
         {
-            FuguController temp = primary;
-            primary = secondary;
-            secondary = temp;
+            primary.scale--;
+            secondary.scale++;
+
+            primary.SetScale();
+            secondary.SetScale();
+
+            switch (secondary.relativePosition)
+            {
+                case RelativePosition.Up:
+                    // Move the secondary left 1, down 1.
+                    secondary.bottomLeftCoordinate += Vector2Int.left + Vector2Int.down;
+                    break;
+                case RelativePosition.Right:
+                    // Move the secondary left 1, down 1.
+                    secondary.bottomLeftCoordinate += Vector2Int.left + Vector2Int.down;
+                    break;
+                case RelativePosition.Down:
+                    // Move the secondary left 1. Primary up 1.
+                    secondary.bottomLeftCoordinate += Vector2Int.left;
+                    primary.bottomLeftCoordinate += Vector2Int.up;
+                    break;
+                case RelativePosition.Left:
+                    // Move the secondary down 1. Primary right 1.
+                    secondary.bottomLeftCoordinate += Vector2Int.down;
+                    primary.bottomLeftCoordinate += Vector2Int.right;
+                    break;
+            }
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -138,8 +179,7 @@ public struct FuguPair
 
 public class GridController : MonoBehaviour
 {
-
-    const int GRID_SIZE = 12;
+    Vector2Int GRID_SIZE = new Vector2Int(14, 12);
 
     private int currentID = 0;
     private Vector2Int defaultSpawnPosition = new Vector2Int(5, 11);
@@ -150,7 +190,7 @@ public class GridController : MonoBehaviour
     public FuguPair ActiveFreefallPair;
 
     // grid holds fugu ids
-    public int[][] grid = new int[GRID_SIZE][];
+    public int[][] grid;
 
     public Queue<FuguPair> fuguQueue = new Queue<FuguPair>();
     public Dictionary<int, FuguController> fuguDict = new Dictionary<int, FuguController>();
@@ -189,10 +229,11 @@ public class GridController : MonoBehaviour
 
     void InitGrid()
     {
-        for (int i = 0; i < GRID_SIZE; i++)
+        grid = new int[GRID_SIZE.x][];
+        for (int i = 0; i < GRID_SIZE.x; i++)
         {
-            grid[i] = new int[GRID_SIZE];
-            for (int j = 0; j < GRID_SIZE; j++)
+            grid[i] = new int[GRID_SIZE.y];
+            for (int j = 0; j < GRID_SIZE.y; j++)
             {
                 grid[i][j] = -1;
             }
@@ -206,14 +247,31 @@ public class GridController : MonoBehaviour
         int id3 = GetUniqueID();
         int id4 = GetUniqueID();
 
+        int id5 = GetUniqueID();
+        int id6 = GetUniqueID();
+        int id7 = GetUniqueID();
+        int id8 = GetUniqueID();
+
+        int id9 = GetUniqueID();
+        int id10 = GetUniqueID();
+
         FuguPair a = new FuguPair(FuguColor.Red, FuguColor.Green, id1, id2, defaultSpawnPosition, FuguPrefab);
         FuguPair b = new FuguPair(FuguColor.Red, FuguColor.Cyan, id3, id4, defaultSpawnPosition, FuguPrefab);
+        FuguPair c = new FuguPair(FuguColor.Red, FuguColor.Pink, id5, id6, defaultSpawnPosition, FuguPrefab);
+        FuguPair d = new FuguPair(FuguColor.Red, FuguColor.Purple, id7, id8, defaultSpawnPosition, FuguPrefab);
+        FuguPair e = new FuguPair(FuguColor.Yellow, FuguColor.Cyan, id9, id10, defaultSpawnPosition, FuguPrefab);
 
         AddPairToDict(a);
         AddPairToDict(b);
+        AddPairToDict(c);
+        AddPairToDict(d);
+        AddPairToDict(e);
 
         fuguQueue.Enqueue(a);
         fuguQueue.Enqueue(b);
+        fuguQueue.Enqueue(c);
+        fuguQueue.Enqueue(d);
+        fuguQueue.Enqueue(e);
     }
 
     public void AddPairToDict(FuguPair fuguPair)
@@ -225,15 +283,15 @@ public class GridController : MonoBehaviour
     Vector2Int GetPlayerMovementInput()
     {
         Vector2Int dir = Vector2Int.zero;
-        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
+        if (Input.GetKeyDown(KeyCode.LeftArrow))// || Input.GetKeyDown(KeyCode.A))
         {
             dir = Vector2Int.left;
         }
-        else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
+        else if (Input.GetKeyDown(KeyCode.RightArrow))// || Input.GetKeyDown(KeyCode.D))
         {
             dir = Vector2Int.right;
         }
-        else if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
+        else if (Input.GetKeyDown(KeyCode.DownArrow))// || Input.GetKeyDown(KeyCode.S))
         {
             dir = Vector2Int.down;
         }
@@ -251,28 +309,81 @@ public class GridController : MonoBehaviour
 
     ActionInput GetPlayerActionInput()
     {
-        if (Input.GetKey(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.E))
         {
             return ActionInput.RotateCW;
         }
-        if (Input.GetKey(KeyCode.Q))
+        if (Input.GetKeyDown(KeyCode.Q))
         {
             return ActionInput.RotateCCW;
         }
-        if (Input.GetKey(KeyCode.Z))
+
+        // I know this is horrible. But trust.
+        if (!ActiveFreefallPair.IsEmpty())
         {
-            return ActionInput.InflatePrimary;
+            // inflation via WASD
+            RelativePosition relP = ActiveFreefallPair.primary.relativePosition;
+            RelativePosition relS = ActiveFreefallPair.secondary.relativePosition;
+
+            bool isValid = false;
+            if (Input.GetKeyDown(KeyCode.W))
+            {
+                if (relP == RelativePosition.Up)
+                {
+                    isValid = ActiveFreefallPair.InflatePrimary();
+                }
+                else if (relS == RelativePosition.Up)
+                {
+                    isValid = ActiveFreefallPair.InflateSecondary();
+                }
+            }
+            if (Input.GetKeyDown(KeyCode.A))
+            {
+                if (relP == RelativePosition.Left)
+                {
+                    isValid = ActiveFreefallPair.InflatePrimary();
+                }
+                else if (relS == RelativePosition.Left)
+                {
+                    isValid = ActiveFreefallPair.InflateSecondary();
+                }
+            }
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                if (relP == RelativePosition.Down)
+                {
+                    isValid = ActiveFreefallPair.InflatePrimary();
+                }
+                else if (relS == RelativePosition.Down)
+                {
+                    isValid = ActiveFreefallPair.InflateSecondary();
+                }
+            }
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                if (relP == RelativePosition.Right)
+                {
+                    isValid = ActiveFreefallPair.InflatePrimary();
+                }
+                else if (relS == RelativePosition.Right)
+                {
+                    isValid = ActiveFreefallPair.InflateSecondary();
+                }
+            }
+            if (isValid)
+            {
+                PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate);
+                PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate);
+            }
         }
-        if (Input.GetKey(KeyCode.C))
-        {
-            return ActionInput.InflateSecondary;
-        }
+
         return ActionInput.NoAction;
     }
 
     void HandlePlayerInput()
     {
         ActionInput actionInput = GetPlayerActionInput();
+        bool isValid = false;
 
         switch (actionInput)
         {
@@ -281,8 +392,10 @@ public class GridController : MonoBehaviour
             case ActionInput.RotateCCW:
                 break;
             case ActionInput.InflatePrimary:
+                // Handled when getting the action. Empty case.
                 break;
             case ActionInput.InflateSecondary:
+                // Handled when getting the action. Empty case.
                 break;
             case ActionInput.NoAction:
                 break;
@@ -319,7 +432,8 @@ public class GridController : MonoBehaviour
             }
             else if (dir == Vector2Int.down)
             {
-                MakeFuguPairFallOneCell();
+                // Do fast drop!!! Call the quick drop with 0 delay.
+                // But do it without the existing quick drop function (which leads to other events)
             }
         }
     }
@@ -365,7 +479,7 @@ public class GridController : MonoBehaviour
         foreach (Vector2Int pos in rightCells)
         {
             // right cells are OOB
-            if (pos.x >= GRID_SIZE)
+            if (pos.x >= GRID_SIZE.x)
             {
                 return false;
             }
@@ -380,7 +494,7 @@ public class GridController : MonoBehaviour
         foreach (Vector2Int pos in rightCells)
         {
             // right cells are OOB
-            if (pos.x >= GRID_SIZE)
+            if (pos.x >= GRID_SIZE.x)
             {
                 return false;
             }
@@ -395,9 +509,15 @@ public class GridController : MonoBehaviour
 
     }
 
+    bool isPlayerLocked = false;
+
     // Update is called once per frame
     void Update()
     {
+        if (isPlayerLocked)
+        {
+            return;
+        }
         HandlePlayerInput();
 
         // Decide how to reconcile player input that happens on the SAME frame as the tick!
@@ -426,7 +546,6 @@ public class GridController : MonoBehaviour
         {
             // 1 tick has occurred! Move the active free-fall pair. 
             MakeFuguPairFallOneCell();
-            ///////MakeFuguPairFallOneCell();
 
             // if the lowest point of the current active pair is resting upon something else, do a few things:
             // 1 - make dangling pieces fall
@@ -438,7 +557,7 @@ public class GridController : MonoBehaviour
 
             if (IsFuguPairLanded())
             {
-                ////////StartCoroutine(FuguLandingDelayStep());
+                StartCoroutine(FuguLandingDelayStep());
             }
 
             gravityTickTimer = 0.0f;
@@ -533,19 +652,57 @@ public class GridController : MonoBehaviour
         // Remove the player's active pair
         ActiveFreefallPair.Disconnect();
 
-        yield return FugusFallStep();
+        // Lock the player's input
+        isPlayerLocked = true;
+
+        yield return FugusQuickFallStep();
     }
 
-    public float FugusFallStepDelay = 0.1f;
-    // Make all fugus fall downward 1 cell per iteration.
-    IEnumerator FugusFallStep()
+    // FugusQuickfallStep should repeatedly call itself until all fugus are at rest.
+    // Start from the lowest fugus, moving up to the highest.
+    public float FugusQuickFallStepDelay = 0.1f;
+    IEnumerator FugusQuickFallStep()
     {
-        yield return new WaitForSeconds(FugusFallStepDelay);
+        List<FuguController> allFugus = new List<FuguController>();
+        foreach(var f in fuguDict)
+        {
+            allFugus.Add(f.Value);
+        }
+
+        // Sort all the fugus by height. Lowest first.
+        allFugus.Sort(delegate (FuguController f1, FuguController f2) {
+            return f1.bottomLeftCoordinate.y.CompareTo(f1.bottomLeftCoordinate.y);
+        });
+
+        yield return new WaitForSeconds(FugusQuickFallStepDelay);
+
+        bool atLeastOneFell = false;
+
+        foreach (FuguController fugu in allFugus)
+        {
+            List<Vector2Int> belowCells = new List<Vector2Int>();
+            foreach (Vector2Int belowCell in belowCells)
+            {
+                // OOB, noop
+                if (isOOB(belowCell))
+                {
+                    continue;
+                }
+                // something blocking, noop
+                if (grid[belowCell.x][belowCell.y] != -1)
+                {
+                    continue;
+                }
+                // otherwise move down 1 cell
+                PlaceFuguInGrid(fugu, fugu.bottomLeftCoordinate + Vector2Int.down);
+                atLeastOneFell = true;
+            }
+        }
 
         // if not all fugus are at rest, do it again
-        if (false)
+        if (atLeastOneFell)
         {
-            yield return FugusFallStep();
+            yield return FugusQuickFallStep();
         }
         else
         {
@@ -554,8 +711,6 @@ public class GridController : MonoBehaviour
     }
     public float ConnectFugusStepDelay = 0.1f;
     // Visually connect adjacent fugus with the same color.
-
-    private Queue<FuguController> fugusMarkedForExploding = new Queue<FuguController>();
 
     // TODO: finish this! Work in progress (like many many other places)
     IEnumerator ConnectFugusStep()
@@ -572,7 +727,6 @@ public class GridController : MonoBehaviour
         // For marking fugus as visited specifically when it's the iteration step, or we explore the matching color.
         HashSet<int> visitedFugus = new HashSet<int>();
         List<HashSet<int>> connectedSets = new List<HashSet<int>>();
-
 
         foreach (KeyValuePair<int, FuguController> p in fuguDict)
         {
@@ -592,13 +746,23 @@ public class GridController : MonoBehaviour
                 connectedSets.Add(connectedFugus);
             }
         }
-
         
 
         yield return new WaitForSeconds(ConnectFugusStepDelay);
 
-        // Set visuall connections between fugus here...
+        yield return ExplodeFugusStep(connectedSets);
 
+        // Set visual connections between fugus here...
+
+    }
+
+    private bool isOOB(Vector2Int pos)
+    {
+        if (pos.x < 0 || pos.y < 0 || pos.x >= GRID_SIZE.x || pos.y >= GRID_SIZE.y)
+        {
+            return true;
+        }
+        return false;
     }
 
     private void ExploreConnectedFugus(FuguController fugu, HashSet<int> visitedFugus, HashSet<int> connectedFugus, HashSet<int> localVisited, FuguColor color)
@@ -613,13 +777,22 @@ public class GridController : MonoBehaviour
         List<Vector2Int> adjacentCells = fugu.GetAllAdjacentCells();
         for (int i = 0; i < adjacentCells.Count; i++)
         {
+            // skip oob cells
             Vector2Int pos = adjacentCells[i];
+            if (isOOB(pos))
+            {
+                continue;
+            }
             nextToVisit.Add(grid[pos.x][pos.y]);
         }
 
         foreach (int id in nextToVisit)
         {
             if (visitedFugus.Contains(id))
+            {
+                continue;
+            }
+            if (id == -1)
             {
                 continue;
             }
@@ -636,13 +809,20 @@ public class GridController : MonoBehaviour
     // Explode every individual fugu. The original game seems to have no particular order for this! Perhaps slighly vary the scheduling
     // of each animation and keep the explosion timer the same no matter how many?
     public float ExplodeFugusDelay = 0.8f;
-    IEnumerator ExplodeFugus()
+    IEnumerator ExplodeFugusStep(List<HashSet<int>> connectedSets)
     {
-        bool isOneOrMoreExplosions = fugusMarkedForExploding.Count > 0;
-        while (fugusMarkedForExploding.Count > 0)
+        bool isOneOrMoreExplosions = connectedSets.Count > 0;
+        foreach(HashSet<int> fuguIDs in connectedSets)
         {
-            FuguController fugu = fugusMarkedForExploding.Dequeue();
-            RemoveFuguFromGrid(fugu);
+            foreach (int id in fuguIDs)
+            {
+                // Check if it's in the dict, because it may have just been removed by a previous iteration.
+                if (fuguDict.ContainsKey(id))
+                {
+                    FuguController fugu = fuguDict[id];
+                    RemoveFuguFromGrid(fugu);
+                }
+            }
         }
 
         yield return new WaitForSeconds(ExplodeFugusDelay);
@@ -652,9 +832,16 @@ public class GridController : MonoBehaviour
         if (isOneOrMoreExplosions)
         {
             // do quickfall
+            yield return FugusQuickFallStep();
+        }
+        else
+        {
+            FuguPair nextFuguPair = fuguQueue.Dequeue();
+            ActiveFreefallPair.SetFuguPair(nextFuguPair);
+
+            isPlayerLocked = false;
         }
     }
-
 
     void RemoveFuguFromGrid(FuguController fugu)
     {
