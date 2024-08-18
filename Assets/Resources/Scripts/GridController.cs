@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 
 
@@ -121,15 +123,41 @@ public struct FuguPair
         }
     }
 
-    public void Rotate(bool isClockWise)
+    public void Rotate(bool isClockwise)
     {
-        if (isClockWise)
-        {
+        //Debug.Log($"Rotate CW: {isClockwise}");
+        RotateAroundPrimaryCenter(isClockwise);
+    }
 
-        }
-        else
-        {
+    private void RotateAroundPrimaryCenter(bool isClockwise)
+    {
+        //Debug.Log($"RotateAroundPrimaryCenter");
+        UpdateFuguRelativePositions(isClockwise);
 
+    }
+
+    private void RotateAroundPairCenter(bool isClockwise)
+    {
+    }
+
+    // Updates the relative positions of the primary and secondary Fugus based on rotations
+    private void UpdateFuguRelativePositions(bool isClockwise)
+    {
+        Debug.Log($"UpdateFuguRelativePositions primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
+        secondary.relativePosition = RotateRelativePosition(secondary.relativePosition, isClockwise);
+        primary.relativePosition = RotateRelativePosition(primary.relativePosition, isClockwise);
+        Debug.Log($"new primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
+    }
+
+    // Returns the relative position after the rotation
+    private RelativePosition RotateRelativePosition(RelativePosition relativePosition, bool isClockwise)
+    {
+        if (isClockwise)
+        {
+            return (RelativePosition)((((int)relativePosition + 1) % 4));
+        } else
+        {
+            return (RelativePosition)((((int)relativePosition - 1) % 4));
         }
     }
 }
@@ -277,8 +305,10 @@ public class GridController : MonoBehaviour
         switch (actionInput)
         {
             case ActionInput.RotateCW:
+                ActiveFreefallPair.Rotate(isClockwise: true);
                 break;
             case ActionInput.RotateCCW:
+                ActiveFreefallPair.Rotate(isClockwise: false);
                 break;
             case ActionInput.InflatePrimary:
                 break;
