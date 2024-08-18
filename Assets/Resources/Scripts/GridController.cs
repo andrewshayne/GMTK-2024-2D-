@@ -566,8 +566,8 @@ public class GridController : MonoBehaviour
         int primaryScale = (int)ActiveFreefallPair.primary.scale;
         int secondaryScale = (int)ActiveFreefallPair.secondary.scale;
         
-        Vector2Int primaryTopRight = new Vector2Int(primaryBottomLeft.x + primaryScale, primaryBottomLeft.y + primaryScale);
-        Vector2Int secondaryTopRight = new Vector2Int(secondaryBottomLeft.x + secondaryScale, secondaryBottomLeft.y + secondaryScale);
+        Vector2Int primaryTopRight = new Vector2Int(primaryBottomLeft.x + primaryScale - 1, primaryBottomLeft.y + primaryScale - 1);
+        Vector2Int secondaryTopRight = new Vector2Int(secondaryBottomLeft.x + secondaryScale - 1, secondaryBottomLeft.y + secondaryScale - 1);
         
         // Check if new primary and secondary bottom left and top right are within the grid
         if (isOOB(primaryBottomLeft) || isOOB(primaryTopRight) || isOOB(secondaryBottomLeft) || isOOB(secondaryTopRight))
@@ -577,9 +577,9 @@ public class GridController : MonoBehaviour
         }
         
         // Check if any of the new primary coords are already occupied
-        for (int i = primaryBottomLeft.x; i < primaryTopRight.x; i++)
+        for (int i = primaryBottomLeft.x; i <= primaryTopRight.x; i++)
         {
-            for (int j = primaryBottomLeft.y; j < primaryTopRight.y; j++)
+            for (int j = primaryBottomLeft.y; j <= primaryTopRight.y; j++)
             {
                 if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.primary.id && grid[i][j] != ActiveFreefallPair.secondary.id)
                 {
@@ -590,9 +590,9 @@ public class GridController : MonoBehaviour
         }
 
         // Check if any of the new secondary coords are already occupied
-        for (int i = secondaryBottomLeft.x; i < secondaryTopRight.x; i++)
+        for (int i = secondaryBottomLeft.x; i <= secondaryTopRight.x; i++)
         {
-            for (int j = secondaryBottomLeft.y; j < secondaryTopRight.y; j++)
+            for (int j = secondaryBottomLeft.y; j <= secondaryTopRight.y; j++)
             {
                 if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.secondary.id && grid[i][j] != ActiveFreefallPair.primary.id)
                 {
