@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -123,47 +124,53 @@ public struct FuguPair
         }
     }
 
-    public void Rotate(bool isClockwise)
+    // Rotates the fugu pair and returns (primary.bottomLeftCoordinate, secondary.bottomLeftCoordinate)
+    public KeyValuePair<Vector2Int, Vector2Int> Rotate(bool isClockwise)
     {
         //Debug.Log($"Rotate CW: {isClockwise}");
-        RotateAroundPrimaryCenter(isClockwise);
+        return RotateAroundPrimaryCenter(isClockwise);
     }
 
-    private void RotateAroundPrimaryCenter(bool isClockwise)
+    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
     {
+        Vector2Int GetNewSecondaryBottomLeftCoordinate(FuguController primary, FuguController secondary)
+        {
+            if (secondary.relativePosition == RelativePosition.Up)
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x,
+                        primary.bottomLeftCoordinate.y + (int)primary.scale
+                        );
+            }
+            else if (secondary.relativePosition == RelativePosition.Right)
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x + (int)primary.scale,
+                        primary.bottomLeftCoordinate.y
+                        );
+            }
+            else if (secondary.relativePosition == RelativePosition.Down)
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x,
+                        primary.bottomLeftCoordinate.y - (int)secondary.scale
+                        );
+            }
+            else
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x - (int)secondary.scale,
+                        primary.bottomLeftCoordinate.y
+                        );
+            }
+        }
+        
         //Debug.Log($"RotateAroundPrimaryCenter");
         UpdateFuguRelativePositions(isClockwise);
-        if (secondary.relativePosition == RelativePosition.Up)
-        {
-            Vector2Int newSecondaryPos = new Vector2Int(
-                    primary.bottomLeftCoordinate.x,
-                    primary.bottomLeftCoordinate.y + (int)primary.scale
-                    );
-            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
-        } else if (secondary.relativePosition == RelativePosition.Right)
-        {
-            Vector2Int newSecondaryPos = new Vector2Int(
-                    primary.bottomLeftCoordinate.x + (int)primary.scale,
-                    primary.bottomLeftCoordinate.y
-                    );
-            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
-        } else if (secondary.relativePosition == RelativePosition.Down)
-        {
-            Vector2Int newSecondaryPos = new Vector2Int(
-                    primary.bottomLeftCoordinate.x,
-                    primary.bottomLeftCoordinate.y - (int)secondary.scale
-                    );
-            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
-        } else if (secondary.relativePosition == RelativePosition.Left)
-        {
-            Vector2Int newSecondaryPos = new Vector2Int(
-                    primary.bottomLeftCoordinate.x - (int)secondary.scale,
-                    primary.bottomLeftCoordinate.y
-                    );
-            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
-        } else {
-            Debug.Log($"RotateARoundPrimaryCenter: invalid secondary.relativePostiion: {secondary.relativePosition}");
-        }
+        
+        Vector2Int newSecondaryBottomLeftCoordinate = GetNewSecondaryBottomLeftCoordinate(primary, secondary);
+
+        return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
     }
 
     private void RotateAroundPairCenter(bool isClockwise)
@@ -335,10 +342,14 @@ public class GridController : MonoBehaviour
         switch (actionInput)
         {
             case ActionInput.RotateCW:
-                ActiveFreefallPair.Rotate(isClockwise: true);
+                KeyValuePair<Vector2Int, Vector2Int> newCWCoords = ActiveFreefallPair.Rotate(isClockwise: true);
+                PlaceFuguInGrid(ActiveFreefallPair.primary, newCWCoords.Key);
+                PlaceFuguInGrid(ActiveFreefallPair.secondary, newCWCoords.Value);
                 break;
             case ActionInput.RotateCCW:
-                ActiveFreefallPair.Rotate(isClockwise: false);
+                KeyValuePair<Vector2Int, Vector2Int> newCCWCoords = ActiveFreefallPair.Rotate(isClockwise: false);
+                PlaceFuguInGrid(ActiveFreefallPair.primary, newCCWCoords.Key);
+                PlaceFuguInGrid(ActiveFreefallPair.secondary, newCCWCoords.Value);
                 break;
             case ActionInput.InflatePrimary:
                 break;
