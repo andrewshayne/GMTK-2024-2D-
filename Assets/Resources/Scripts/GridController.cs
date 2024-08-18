@@ -133,7 +133,37 @@ public struct FuguPair
     {
         //Debug.Log($"RotateAroundPrimaryCenter");
         UpdateFuguRelativePositions(isClockwise);
-
+        if (secondary.relativePosition == RelativePosition.Up)
+        {
+            Vector2Int newSecondaryPos = new Vector2Int(
+                    primary.bottomLeftCoordinate.x,
+                    primary.bottomLeftCoordinate.y + (int)primary.scale
+                    );
+            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
+        } else if (secondary.relativePosition == RelativePosition.Right)
+        {
+            Vector2Int newSecondaryPos = new Vector2Int(
+                    primary.bottomLeftCoordinate.x + (int)primary.scale,
+                    primary.bottomLeftCoordinate.y
+                    );
+            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
+        } else if (secondary.relativePosition == RelativePosition.Down)
+        {
+            Vector2Int newSecondaryPos = new Vector2Int(
+                    primary.bottomLeftCoordinate.x,
+                    primary.bottomLeftCoordinate.y - (int)secondary.scale
+                    );
+            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
+        } else if (secondary.relativePosition == RelativePosition.Left)
+        {
+            Vector2Int newSecondaryPos = new Vector2Int(
+                    primary.bottomLeftCoordinate.x - (int)secondary.scale,
+                    primary.bottomLeftCoordinate.y
+                    );
+            secondary.SetGridPosition(bottomLeftCoordinate: newSecondaryPos);
+        } else {
+            Debug.Log($"RotateARoundPrimaryCenter: invalid secondary.relativePostiion: {secondary.relativePosition}");
+        }
     }
 
     private void RotateAroundPairCenter(bool isClockwise)
@@ -143,10 +173,10 @@ public struct FuguPair
     // Updates the relative positions of the primary and secondary Fugus based on rotations
     private void UpdateFuguRelativePositions(bool isClockwise)
     {
-        Debug.Log($"UpdateFuguRelativePositions primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
+        //Debug.Log($"UpdateFuguRelativePositions primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
         secondary.relativePosition = RotateRelativePosition(secondary.relativePosition, isClockwise);
         primary.relativePosition = RotateRelativePosition(primary.relativePosition, isClockwise);
-        Debug.Log($"new primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
+        //Debug.Log($"new primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
     }
 
     // Returns the relative position after the rotation
