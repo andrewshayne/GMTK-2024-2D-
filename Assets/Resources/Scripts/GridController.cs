@@ -1,6 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.UIElements;
 using System.Linq;
 
 
@@ -162,15 +166,80 @@ public struct FuguPair
         }
     }
 
-    public void Rotate(bool isClockWise)
+    // Rotates the fugu pair and returns (primary.bottomLeftCoordinate, secondary.bottomLeftCoordinate)
+    public KeyValuePair<Vector2Int, Vector2Int> Rotate(bool isClockwise)
     {
-        if (isClockWise)
-        {
+        //Debug.Log($"Rotate CW: {isClockwise}");
+        return RotateAroundPrimaryCenter(isClockwise);
+    }
 
+    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
+    {
+        static Vector2Int GetNewSecondaryBottomLeftCoordinate(
+            FuguController primary,
+            FuguController secondary,
+            RelativePosition newSecondaryRelativePosition
+            )
+        {
+            if (newSecondaryRelativePosition == RelativePosition.Up)
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x,
+                        primary.bottomLeftCoordinate.y + (int)primary.scale
+                        );
+            }
+            else if (newSecondaryRelativePosition == RelativePosition.Right)
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x + (int)primary.scale,
+                        primary.bottomLeftCoordinate.y
+                        );
+            }
+            else if (newSecondaryRelativePosition == RelativePosition.Down)
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x,
+                        primary.bottomLeftCoordinate.y - (int)secondary.scale
+                        );
+            }
+            else
+            {
+                return new Vector2Int(
+                        primary.bottomLeftCoordinate.x - (int)secondary.scale,
+                        primary.bottomLeftCoordinate.y
+                        );
+            }
         }
-        else
-        {
 
+        RelativePosition newSecondaryRelativePosition = RotateRelativePosition(secondary.relativePosition, isClockwise);
+
+        Vector2Int newSecondaryBottomLeftCoordinate = GetNewSecondaryBottomLeftCoordinate(primary, secondary, newSecondaryRelativePosition);
+
+        return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
+    }
+
+    private void RotateAroundPairCenter(bool isClockwise)
+    {
+    }
+
+    // Updates the relative positions of the primary and secondary Fugus based on rotations
+    public void UpdateFuguRelativePositions(bool isClockwise)
+    {
+        //Debug.Log($"UpdateFuguRelativePositions primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
+        secondary.relativePosition = RotateRelativePosition(secondary.relativePosition, isClockwise);
+        primary.relativePosition = RotateRelativePosition(primary.relativePosition, isClockwise);
+        //Debug.Log($"new primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
+    }
+
+    // Returns the relative position after the rotation
+    private RelativePosition RotateRelativePosition(RelativePosition relativePosition, bool isClockwise)
+    {
+        if (isClockwise)
+        {
+            return (RelativePosition)((((int)relativePosition + 1) % 4 + 4) %4);
+        } else
+        {
+            return (RelativePosition)((((int)relativePosition - 1) % 4 + 4) %4);
         }
     }
 }
@@ -388,8 +457,26 @@ public class GridController : MonoBehaviour
         switch (actionInput)
         {
             case ActionInput.RotateCW:
+                //Debug.Log($"CW primary coord: {ActiveFreefallPair.primary} secondary coord: {ActiveFreefallPair.secondary}");
+                KeyValuePair<Vector2Int, Vector2Int> newCWCoords = ActiveFreefallPair.Rotate(isClockwise: true);
+                //Debug.Log($"CW primary coord: {newCWCoords.Key} secondary coord: {newCWCoords.Value}");
+                if (CanMoveFuguPairToCoords(primaryBottomLeft: newCWCoords.Key, secondaryBottomLeft: newCWCoords.Value))
+                {
+                    ActiveFreefallPair.UpdateFuguRelativePositions(isClockwise: true);
+                    PlaceFuguInGrid(ActiveFreefallPair.primary, newCWCoords.Key);
+                    PlaceFuguInGrid(ActiveFreefallPair.secondary, newCWCoords.Value);
+                }
                 break;
             case ActionInput.RotateCCW:
+                //Debug.Log($"CCW primary coord: {ActiveFreefallPair.primary} secondary coord: {ActiveFreefallPair.secondary}");
+                KeyValuePair<Vector2Int, Vector2Int> newCCWCoords = ActiveFreefallPair.Rotate(isClockwise: false);
+                //Debug.Log($"CCW after primary coord: {newCCWCoords.Key} secondary coord: {newCCWCoords.Value}");
+                if (CanMoveFuguPairToCoords(primaryBottomLeft: newCCWCoords.Key, secondaryBottomLeft: newCCWCoords.Value))
+                {
+                    ActiveFreefallPair.UpdateFuguRelativePositions(isClockwise: false);
+                    PlaceFuguInGrid(ActiveFreefallPair.primary, newCCWCoords.Key);
+                    PlaceFuguInGrid(ActiveFreefallPair.secondary, newCCWCoords.Value);
+                }
                 break;
             case ActionInput.InflatePrimary:
                 // Handled when getting the action. Empty case.
@@ -436,6 +523,42 @@ public class GridController : MonoBehaviour
                 // But do it without the existing quick drop function (which leads to other events)
             }
         }
+    }
+
+    private bool CanMoveFuguPairToCoords(Vector2Int primaryBottomLeft, Vector2Int secondaryBottomLeft) 
+    {
+        // Check if new primary and secondary bottom left is within the grid
+        if (primaryBottomLeft.x < 0 || primaryBottomLeft.y < 0) return false;
+        if (secondaryBottomLeft.x < 0 || secondaryBottomLeft.y < 0) return false;
+        
+        int primaryScale = (int)ActiveFreefallPair.primary.scale;
+        int secondaryScale = (int)ActiveFreefallPair.secondary.scale;
+        
+        Vector2Int primaryTopRight = new Vector2Int(primaryBottomLeft.x + primaryScale, primaryBottomLeft.y + primaryScale);
+        Vector2Int secondaryTopRight = new Vector2Int(secondaryBottomLeft.x + secondaryScale, secondaryBottomLeft.y + secondaryScale);
+        
+        // Check if new primary and secondary top right is within the grid
+        if (primaryTopRight.x >= GRID_SIZE || primaryTopRight.y >= GRID_SIZE) return false;
+        if (secondaryTopRight.x >= GRID_SIZE || secondaryTopRight.y >= GRID_SIZE) return false;
+        
+        // Check if any of the new primary coords are already occupied
+        for (int i = primaryBottomLeft.x; i <= primaryTopRight.x; i++)
+        {
+            for (int j = primaryBottomLeft.y; j <= primaryTopRight.y; j++)
+            {
+                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.primary.id && grid[i][j] != ActiveFreefallPair.secondary.id) return false;
+            }
+        }
+
+        // Check if any of the new secondary coords are already occupied
+        for (int i = secondaryBottomLeft.x; i <= secondaryTopRight.x; i++)
+        {
+            for (int j = secondaryBottomLeft.y; j <= secondaryTopRight.y; j++)
+            {
+                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.secondary.id && grid[i][j] != ActiveFreefallPair.primary.id) return false;
+            }
+        }
+        return true;
     }
 
     // Basically this function tells up if we're currently up against a wall of any kind
