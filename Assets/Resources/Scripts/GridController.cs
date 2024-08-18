@@ -86,82 +86,78 @@ public struct FuguPair
     }
 
     // Inflate the primary fugu, deflate the secondary.
-    public bool InflatePrimary()
+    public bool Inflate(bool inflatePrimary)
     {
-        // Inflate if it's smaller than a large fugu.
-        if (primary.scale < FuguScale.Large)
+        FuguController inflateMe;
+        FuguController deflateMe;
+        if (inflatePrimary)
         {
-            primary.scale++;
-            secondary.scale--;
+            inflateMe = primary;
+            deflateMe = secondary;
+        }
+        else
+        {
+            inflateMe = secondary;
+            deflateMe = primary;
+        }
 
-            primary.SetScaleVisuals();
-            secondary.SetScaleVisuals();
+        // Inflate if it's smaller than a large fugu.
+        if (inflateMe.scale < FuguScale.Large)
+        {
+            inflateMe.scale++;
+            deflateMe.scale--;
+            inflateMe.SetScaleVisuals();
+            deflateMe.SetScaleVisuals();
 
-            switch (primary.relativePosition)
+            if (inflateMe.scale == FuguScale.Medium)
             {
-                case RelativePosition.Up:
-                    // Move the secondary right 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up;
-                    break;
-                case RelativePosition.Right:
-                    // Move the secondary up 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up;
-                    break;
-                case RelativePosition.Down:
-                    // Move the secondary up 1, right 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up + Vector2Int.right;
-                    break;
-                case RelativePosition.Left:
-                    // Move the secondary up 1, right 1
-                    secondary.bottomLeftCoordinate += Vector2Int.up + Vector2Int.right;
-                    break;
+                switch (inflateMe.relativePosition)
+                {
+                    case RelativePosition.Up:
+                        inflateMe.bottomLeftCoordinate += Vector2Int.left;
+                        inflateMe.bottomLeftCoordinate += Vector2Int.down;
+                        break;
+                    case RelativePosition.Right:
+                        inflateMe.bottomLeftCoordinate += Vector2Int.left;
+                        inflateMe.bottomLeftCoordinate += Vector2Int.down;
+                        break;
+                    case RelativePosition.Down:
+                        inflateMe.bottomLeftCoordinate += Vector2Int.left;
+                        deflateMe.bottomLeftCoordinate += Vector2Int.up;
+                        break;
+                    case RelativePosition.Left:
+                        inflateMe.bottomLeftCoordinate += Vector2Int.down;
+                        deflateMe.bottomLeftCoordinate += Vector2Int.right;
+                        break;
+                }
+            }
+            else if (inflateMe.scale == FuguScale.Large)
+            {
+                switch (inflateMe.relativePosition)
+                {
+                    case RelativePosition.Up:
+                        inflateMe.bottomLeftCoordinate += Vector2Int.down;
+                        deflateMe.bottomLeftCoordinate += Vector2Int.right;
+                        break;
+                    case RelativePosition.Right:
+                        inflateMe.bottomLeftCoordinate += Vector2Int.left;
+                        deflateMe.bottomLeftCoordinate += Vector2Int.up;
+                        break;
+                    case RelativePosition.Down:
+                        deflateMe.bottomLeftCoordinate += Vector2Int.right;
+                        deflateMe.bottomLeftCoordinate += Vector2Int.up;
+                        break;
+                    case RelativePosition.Left:
+                        deflateMe.bottomLeftCoordinate += Vector2Int.right;
+                        deflateMe.bottomLeftCoordinate += Vector2Int.up;
+                        break;
+                }
             }
             return true;
         }
         else
         {
             // Play a sound indicating this action is unavailable.
-            return false;
-        }
-    }
-
-    // Inflate the secondary fugu, deflate the secondary.
-    public bool InflateSecondary()
-    {
-        // Inflate if it's smaller than a large fugu.
-        if (secondary.scale < FuguScale.Large)
-        {
-            primary.scale--;
-            secondary.scale++;
-
-            primary.SetScaleVisuals();
-            secondary.SetScaleVisuals();
-
-            switch (secondary.relativePosition)
-            {
-                case RelativePosition.Up:
-                    // Move the secondary left 1, down 1.
-                    secondary.bottomLeftCoordinate += Vector2Int.left + Vector2Int.down;
-                    break;
-                case RelativePosition.Right:
-                    // Move the secondary left 1, down 1.
-                    secondary.bottomLeftCoordinate += Vector2Int.left + Vector2Int.down;
-                    break;
-                case RelativePosition.Down:
-                    // Move the secondary left 1. Primary up 1.
-                    secondary.bottomLeftCoordinate += Vector2Int.left;
-                    primary.bottomLeftCoordinate += Vector2Int.up;
-                    break;
-                case RelativePosition.Left:
-                    // Move the secondary down 1. Primary right 1.
-                    secondary.bottomLeftCoordinate += Vector2Int.down;
-                    primary.bottomLeftCoordinate += Vector2Int.right;
-                    break;
-            }
-            return true;
-        }
-        else
-        {
             return false;
         }
     }
@@ -410,44 +406,44 @@ public class GridController : MonoBehaviour
             {
                 if (relP == RelativePosition.Up)
                 {
-                    isValid = ActiveFreefallPair.InflatePrimary();
+                    isValid = ActiveFreefallPair.Inflate(true);
                 }
                 else if (relS == RelativePosition.Up)
                 {
-                    isValid = ActiveFreefallPair.InflateSecondary();
+                    isValid = ActiveFreefallPair.Inflate(false);
                 }
             }
             if (Input.GetKeyDown(KeyCode.A))
             {
                 if (relP == RelativePosition.Left)
                 {
-                    isValid = ActiveFreefallPair.InflatePrimary();
+                    isValid = ActiveFreefallPair.Inflate(true);
                 }
                 else if (relS == RelativePosition.Left)
                 {
-                    isValid = ActiveFreefallPair.InflateSecondary();
+                    isValid = ActiveFreefallPair.Inflate(false);
                 }
             }
             if (Input.GetKeyDown(KeyCode.S))
             {
                 if (relP == RelativePosition.Down)
                 {
-                    isValid = ActiveFreefallPair.InflatePrimary();
+                    isValid = ActiveFreefallPair.Inflate(true);
                 }
                 else if (relS == RelativePosition.Down)
                 {
-                    isValid = ActiveFreefallPair.InflateSecondary();
+                    isValid = ActiveFreefallPair.Inflate(false);
                 }
             }
             if (Input.GetKeyDown(KeyCode.D))
             {
                 if (relP == RelativePosition.Right)
                 {
-                    isValid = ActiveFreefallPair.InflatePrimary();
+                    isValid = ActiveFreefallPair.Inflate(true);
                 }
                 else if (relS == RelativePosition.Right)
                 {
-                    isValid = ActiveFreefallPair.InflateSecondary();
+                    isValid = ActiveFreefallPair.Inflate(false);
                 }
             }
             if (isValid)
