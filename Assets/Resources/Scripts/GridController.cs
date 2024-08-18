@@ -170,17 +170,27 @@ public struct FuguPair
             return RotateAroundPairCenter(isClockwise);
         } else
         {
-            return RotateAroundPrimaryCenter(isClockwise);
+            return RotateAroundBigFuguCenter(isClockwise);
         }
     }
 
-    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPrimaryCenter(bool isClockwise)
+    private KeyValuePair<Vector2Int, Vector2Int> RotateAroundBigFuguCenter(bool isClockwise)
     {
-        Vector2Int primaryCenter = primary.GetCenterCoord();
+        if (primary.scale > secondary.scale)
+        {
+            Vector2Int primaryCenter = primary.GetCenterCoord();
 
-        Vector2Int newSecondaryBottomLeftCoordinate = RotatePointAroundPoint(primaryCenter, secondary.bottomLeftCoordinate, isClockwise);
+            Vector2Int newSecondaryBottomLeftCoordinate = RotatePointAroundPoint(primaryCenter, secondary.bottomLeftCoordinate, isClockwise);
 
-        return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
+            return new KeyValuePair<Vector2Int, Vector2Int>(primary.bottomLeftCoordinate, newSecondaryBottomLeftCoordinate);
+        } else
+        {
+            Vector2Int secondaryCenter = secondary.GetCenterCoord();
+
+            Vector2Int newPrimaryBottomLeftCoordinate = RotatePointAroundPoint(secondaryCenter, primary.bottomLeftCoordinate, isClockwise);
+
+            return new KeyValuePair<Vector2Int, Vector2Int>(newPrimaryBottomLeftCoordinate, secondary.bottomLeftCoordinate);
+        }
     }
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPairCenter(bool isClockwise)
