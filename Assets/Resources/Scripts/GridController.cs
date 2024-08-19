@@ -274,8 +274,8 @@ public struct  GridState
     public FuguState PrimaryFugu;
     public FuguState SecondaryFugu;
     
-    // List of all the fugus in the grid
-    public List<FuguState> fugusInGrid;
+    // Set of all the ids of fugus in the grid
+    public HashSet<int> fuguIdsInGrid;
 
     public FuguState FuguToFuguState(FuguController fugu)
     {
@@ -507,25 +507,42 @@ public class GridController : MonoBehaviour
         return ActionInput.NoAction;
     }
 
-    private int[][] CopyGrid()
+    public void SaveGridState(FuguPair? fuguPair = null)
     {
-        int[][] copyGrid = new int[GRID_SIZE.x] [];
+        GridState state = new GridState();
+
+        // Copy grid
+        int[][] copyGrid = new int[GRID_SIZE.x][];
+        HashSet<int> fugusInGrid = new HashSet<int>();
+        
         for (int i = 0; i < GRID_SIZE.x; i++)
         {
             int[] row = new int[GRID_SIZE.y];
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                row[j] = grid[i][j];
+                int fuguId = grid[i][j];
+                row[j] = fuguId;
+                if (fuguId != -1)
+                {
+                    fugusInGrid.Add(fuguId);
+                }
             }
             copyGrid[i] = row;
         }
-        return copyGrid;
-    }
+        state.grid = copyGrid;
 
-    public void SaveGridState()
-    {
-        GridState state = new GridState();
-        state.grid = CopyGrid();
+        // Fugu ids in grid
+        state.fuguIdsInGrid = fugusInGrid;
+
+        // Save active fugu pair
+        if (fuguPair != null)
+        {
+            state.PrimaryFugu = state.FuguToFuguState(fuguPair.Value.primary);
+            state.SecondaryFugu = state.FuguToFuguState(fuguPair.Value.secondary);
+        }
+
+        // Push to the history stack
+        History.Push(state);
     }
 
     // Call this function if you just need to wipe the grid of a specific fugu id.
@@ -756,6 +773,7 @@ public class GridController : MonoBehaviour
             {
                 FuguPair fuguPair = fuguQueue.Dequeue();
                 ActiveFreefallPair.SetFuguPair(fuguPair);
+                SaveGridState(fuguPair);
                 PlaceFuguInGrid(fuguPair.primary, fuguPair.primary.bottomLeftCoordinate);
                 PlaceFuguInGrid(fuguPair.secondary, fuguPair.secondary.bottomLeftCoordinate);
             }
