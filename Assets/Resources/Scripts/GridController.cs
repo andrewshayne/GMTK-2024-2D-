@@ -258,6 +258,37 @@ public struct FuguPair
     }
 }
 
+public struct  GridState
+{
+    public int[][] grid;
+
+    public struct FuguState
+    {
+        public bool isPrimary;
+        public int id;
+        public FuguColor color;
+        public FuguScale scale;
+        public Vector2Int bottomLeftCoord;
+    }
+
+    public FuguState PrimaryFugu;
+    public FuguState SecondaryFugu;
+    
+    // List of all the fugus in the grid
+    public List<FuguState> fugusInGrid;
+
+    public FuguState FuguToFuguState(FuguController fugu)
+    {
+        FuguState state = new FuguState();
+        state.isPrimary = fugu.isPrimary;
+        state.id = fugu.id;
+        state.color = fugu.color;
+        state.scale = fugu.scale;
+        state.bottomLeftCoord = fugu.bottomLeftCoordinate;
+        return state;
+    }
+}
+
 
 
 public class GridController : MonoBehaviour
@@ -279,6 +310,8 @@ public class GridController : MonoBehaviour
     public Dictionary<int, FuguController> fuguDict = new Dictionary<int, FuguController>();
     public GameObject FuguPrefab;
     public GameObject DebuggingSquare;
+    
+    public Stack<GridState> History = new Stack<GridState>();
 
     int GetUniqueID()
     {
@@ -300,6 +333,8 @@ public class GridController : MonoBehaviour
         fuguQueue.Clear();
         // Clear the dictionary.
         fuguDict.Clear();
+        // Clear history
+        History.Clear();
     }
 
     // Start is called before the first frame update
@@ -308,6 +343,9 @@ public class GridController : MonoBehaviour
         // load grid from file or something...
         InitGrid();
         InitQueue();
+
+        // Save grid state to history
+        SaveGridState();
 
         // Debugging
         InitDebuggingGrid();
@@ -467,6 +505,27 @@ public class GridController : MonoBehaviour
         }
 
         return ActionInput.NoAction;
+    }
+
+    private int[][] CopyGrid()
+    {
+        int[][] copyGrid = new int[GRID_SIZE.x] [];
+        for (int i = 0; i < GRID_SIZE.x; i++)
+        {
+            int[] row = new int[GRID_SIZE.y];
+            for (int j = 0; j < GRID_SIZE.y; j++)
+            {
+                row[j] = grid[i][j];
+            }
+            copyGrid[i] = row;
+        }
+        return copyGrid;
+    }
+
+    public void SaveGridState()
+    {
+        GridState state = new GridState();
+        state.grid = CopyGrid();
     }
 
     // Call this function if you just need to wipe the grid of a specific fugu id.
@@ -837,14 +896,17 @@ public class GridController : MonoBehaviour
     public float FugusQuickFallStepDelay = 0.1f;
     IEnumerator FugusQuickFallStep()
     {
-        List<FuguController> allFugus = new List<FuguController>();
+        List<FuguController> allActiveFugus = new List<FuguController>();
         foreach(var f in fuguDict)
         {
-            allFugus.Add(f.Value);
+            if (f.Value.gameObject.activeInHierarchy)
+            {
+                allActiveFugus.Add(f.Value);
+            }
         }
 
-        // Sort all the fugus by height. Lowest first.
-        allFugus.Sort(delegate (FuguController f1, FuguController f2) {
+        // Sort all active fugus by height. Lowest first.
+        allActiveFugus.Sort(delegate (FuguController f1, FuguController f2) {
             return f1.bottomLeftCoordinate.y.CompareTo(f1.bottomLeftCoordinate.y);
         });
 
@@ -852,7 +914,7 @@ public class GridController : MonoBehaviour
 
         bool atLeastOneFell = false;
 
-        foreach (FuguController fugu in allFugus)
+        foreach (FuguController fugu in allActiveFugus)
         {
             List<Vector2Int> belowCells = new List<Vector2Int>();
             foreach (Vector2Int belowCell in belowCells)
@@ -904,8 +966,8 @@ public class GridController : MonoBehaviour
 
         foreach (KeyValuePair<int, FuguController> p in fuguDict)
         {
-            // skip if visited already
-            if (visitedFugus.Contains(p.Key))
+            // skip if visited already or if the gameObject is inactive
+            if (visitedFugus.Contains(p.Key) || !p.Value.gameObject.activeInHierarchy)
             {
                 continue;
             }
@@ -962,7 +1024,7 @@ public class GridController : MonoBehaviour
 
         foreach (int id in nextToVisit)
         {
-            if (visitedFugus.Contains(id))
+            if (visitedFugus.Contains(id) || (fuguDict.ContainsKey(id) && !fuguDict[id].gameObject.activeInHierarchy))
             {
                 continue;
             }
@@ -990,8 +1052,8 @@ public class GridController : MonoBehaviour
         {
             foreach (int id in fuguIDs)
             {
-                // Check if it's in the dict, because it may have just been removed by a previous iteration.
-                if (fuguDict.ContainsKey(id))
+                // Check if it's in the dict and is active, because it may have just been removed by a previous iteration.
+                if (fuguDict.ContainsKey(id) && fuguDict[id].gameObject.activeInHierarchy)
                 {
                     FuguController fugu = fuguDict[id];
                     RemoveFuguFromGrid(fugu);
@@ -1019,13 +1081,15 @@ public class GridController : MonoBehaviour
 
     void RemoveFuguFromGrid(FuguController fugu)
     {
-        fuguDict.Remove(fugu.id);
-        fugu.ExplodeSelf();
+        if (fuguDict[fugu.id].gameObject.activeInHierarchy)
+        {
+            fugu.ExplodeSelf();
+        }
     }
 
 
     // Debugging fugu / cell tool.
-    private bool enableDebuggingGrid = true;
+    private bool enableDebuggingGrid = false;
     private List<List<GameObject>> debuggingGrid;
     void InitDebuggingGrid()
     {
@@ -1057,7 +1121,7 @@ public class GridController : MonoBehaviour
             {
                 for (int j = 0; j < GRID_SIZE.y; j++)
                 {
-                    bool isActive = grid[i][j] != -1;
+                    bool isActive = grid[i][j] != -1 && fuguDict[grid[i][j]].gameObject.activeInHierarchy;
                     debuggingGrid[i][j].SetActive(isActive);
                 }
             }

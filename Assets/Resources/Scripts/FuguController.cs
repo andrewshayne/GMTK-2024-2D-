@@ -211,7 +211,7 @@ public class FuguController : MonoBehaviour
         // particles...
 
         yield return new WaitForSeconds(ExplosionDelay);
-        Destroy(gameObject);
+        gameObject.SetActive(false); ;
     }
 
     public Vector2Int GetCenterCoord()
