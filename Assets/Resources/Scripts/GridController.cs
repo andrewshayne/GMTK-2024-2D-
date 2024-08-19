@@ -555,8 +555,11 @@ public class GridController : MonoBehaviour
             }
             else if (dir == Vector2Int.down)
             {
-                // Do fast drop!!! Call the quick drop with 0 delay.
-                // But do it without the existing quick drop function (which leads to other events)
+                if (CanMoveFuguPairDown())
+                {
+                    PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate + dir);
+                    PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + dir);
+                }
             }
         }
     }
@@ -673,6 +676,41 @@ public class GridController : MonoBehaviour
 
         return true;
 
+    }
+
+    bool CanMoveFuguPairDown()
+    {
+        List<Vector2Int> belowCells = ActiveFreefallPair.primary.GetBelowCells();
+        foreach (Vector2Int pos in belowCells)
+        {
+            // below cells are OOB
+            if (pos.y < 0)
+            {
+                return false;
+            }
+            // below cell is something other than partner fugu or -1
+            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.secondary.id)
+            {
+                return false;
+            }
+        }
+
+        belowCells = ActiveFreefallPair.secondary.GetRightCells();
+        foreach (Vector2Int pos in belowCells)
+        {
+            // below cells are OOB
+            if (pos.y < 0)
+            {
+                return false;
+            }
+            // below cell is something other than partner fugu
+            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.primary.id)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     bool isPlayerLocked = false;
@@ -915,18 +953,50 @@ public class GridController : MonoBehaviour
             // Explore all color matching fugus from here once.
             HashSet<int> connectedFugus = new HashSet<int>();
             ExploreConnectedFugus(fugu, visitedFugus, connectedFugus, new HashSet<int>(), fugu.color);
-            if (connectedFugus.Count >= 4)
-            {
-                connectedSets.Add(connectedFugus);
-            }
+            connectedSets.Add(connectedFugus);
         }
-        
+
+        // Set visual connections between fugus here...
 
         yield return new WaitForSeconds(ConnectFugusStepDelay);
 
         yield return ExplodeFugusStep(connectedSets);
 
-        // Set visual connections between fugus here...
+
+    }
+
+    // TODO: Finish this/get it working.
+    void DrawConnectedFuguPerimeters(List<HashSet<int>> connectedSets)
+    {
+        List<HashSet<Vector2Int>> cellCoordSets = new List<HashSet<Vector2Int>>();
+
+        // Iterate over each fugu.
+        foreach (HashSet<int> fuguIDs in connectedSets)
+        {
+            HashSet<Vector2Int> cells = new HashSet<Vector2Int>();
+
+            // Iterate over all cells of each fugu and add to collective set for these adjacent fugus.
+            foreach (int id in fuguIDs)
+            {
+                FuguController fugu = fuguDict[id];
+                foreach (Vector2Int pos in fugu.GetAllCells())
+                {
+                    cells.Add(pos);
+                }
+            }
+            cellCoordSets.Add(cells);
+        }
+
+        // Using the groups of adjacent cells. get the 
+
+
+        // .... using shader method, get all adjacent cells and put a cylinder between them.
+
+        // iterate over sets...
+        foreach (HashSet<Vector2Int> cell in cellCoordSets)
+        {
+
+        }
 
     }
 
@@ -985,9 +1055,15 @@ public class GridController : MonoBehaviour
     public float ExplodeFugusDelay = 0.8f;
     IEnumerator ExplodeFugusStep(List<HashSet<int>> connectedSets)
     {
-        bool isOneOrMoreExplosions = connectedSets.Count > 0;
+        bool isOneOrMoreExplosions = false;
         foreach(HashSet<int> fuguIDs in connectedSets)
         {
+            if (fuguIDs.Count < 4)
+            {
+                continue;
+            }
+            isOneOrMoreExplosions = true;
+
             foreach (int id in fuguIDs)
             {
                 // Check if it's in the dict, because it may have just been removed by a previous iteration.
@@ -1025,7 +1101,7 @@ public class GridController : MonoBehaviour
 
 
     // Debugging fugu / cell tool.
-    private bool enableDebuggingGrid = true;
+    private bool enableDebuggingGrid = false;
     private List<List<GameObject>> debuggingGrid;
     void InitDebuggingGrid()
     {
