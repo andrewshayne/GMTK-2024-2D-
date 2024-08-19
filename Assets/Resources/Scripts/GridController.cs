@@ -81,6 +81,9 @@ public struct FuguPair
 
     public void Disconnect()
     {
+        // Trigger fugu animation to exit the kissy stage!
+        primary.DetachFromPair();
+        secondary.DetachFromPair();
         this.primary = null;
         this.secondary = null;
     }
@@ -277,6 +280,9 @@ public class GridController : MonoBehaviour
 
     public Queue<FuguPair> fuguQueue = new Queue<FuguPair>();
     public Dictionary<int, FuguController> fuguDict = new Dictionary<int, FuguController>();
+
+    public SFXManager sfxManager;
+
     public GameObject FuguPrefab;
     public GameObject DebuggingSquare;
 
@@ -311,6 +317,11 @@ public class GridController : MonoBehaviour
 
         // Debugging
         InitDebuggingGrid();
+
+        FuguPair fuguPair = fuguQueue.Dequeue();
+        ActiveFreefallPair.SetFuguPair(fuguPair);
+        PlaceFuguInGrid(fuguPair.primary, fuguPair.primary.bottomLeftCoordinate);
+        PlaceFuguInGrid(fuguPair.secondary, fuguPair.secondary.bottomLeftCoordinate);
     }
 
     void InitGrid()
@@ -358,6 +369,28 @@ public class GridController : MonoBehaviour
         fuguQueue.Enqueue(c);
         fuguQueue.Enqueue(d);
         fuguQueue.Enqueue(e);
+    }
+
+    public List<FuguController> GetAllFugusInGrid()
+    {
+        List<FuguController> fugus = new List<FuguController>();
+        HashSet<int> ids = new HashSet<int>();
+        for (int i = 0; i < GRID_SIZE.x; i++)
+        {
+            for (int j = 0; j < GRID_SIZE.y; j++)
+            {
+                if (grid[i][j] == -1)
+                {
+                    continue;
+                }
+                ids.Add(grid[i][j]);
+            }
+        }
+        foreach (int id in ids)
+        {
+            fugus.Add(fuguDict[id]);
+        }
+        return fugus;
     }
 
     public void AddPairToDict(FuguPair fuguPair)
@@ -501,6 +534,7 @@ public class GridController : MonoBehaviour
                     ActiveFreefallPair.UpdateFuguRelativePositions(isClockwise: true);
                     PlaceFuguInGrid(ActiveFreefallPair.primary, newCWCoords.Key);
                     PlaceFuguInGrid(ActiveFreefallPair.secondary, newCWCoords.Value);
+                    sfxManager.PlayRotateSFX();
                 }
                 break;
             case ActionInput.RotateCCW:
@@ -512,6 +546,7 @@ public class GridController : MonoBehaviour
                     ActiveFreefallPair.UpdateFuguRelativePositions(isClockwise: false);
                     PlaceFuguInGrid(ActiveFreefallPair.primary, newCCWCoords.Key);
                     PlaceFuguInGrid(ActiveFreefallPair.secondary, newCCWCoords.Value);
+                    sfxManager.PlayRotateSFX();
                 }
                 break;
             case ActionInput.InflatePrimary:
@@ -535,6 +570,7 @@ public class GridController : MonoBehaviour
                 {
                     PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate + dir);
                     PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + dir);
+                    sfxManager.PlayMoveSFX();
                 }
                 else
                 {
@@ -547,6 +583,7 @@ public class GridController : MonoBehaviour
                 {
                     PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate + dir);
                     PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + dir);
+                    sfxManager.PlayMoveSFX();
                 }
                 else
                 {
@@ -559,6 +596,7 @@ public class GridController : MonoBehaviour
                 {
                     PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate + dir);
                     PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + dir);
+                    sfxManager.PlayMoveSFX();
                 }
             }
         }
@@ -695,7 +733,7 @@ public class GridController : MonoBehaviour
             }
         }
 
-        belowCells = ActiveFreefallPair.secondary.GetRightCells();
+        belowCells = ActiveFreefallPair.secondary.GetBelowCells();
         foreach (Vector2Int pos in belowCells)
         {
             // below cells are OOB
@@ -727,23 +765,6 @@ public class GridController : MonoBehaviour
         HandlePlayerInput();
 
         // Decide how to reconcile player input that happens on the SAME frame as the tick!
-
-
-        if (ActiveFreefallPair.IsEmpty())
-        {
-            if (fuguQueue.Count > 0)
-            {
-                FuguPair fuguPair = fuguQueue.Dequeue();
-                ActiveFreefallPair.SetFuguPair(fuguPair);
-                PlaceFuguInGrid(fuguPair.primary, fuguPair.primary.bottomLeftCoordinate);
-                PlaceFuguInGrid(fuguPair.secondary, fuguPair.secondary.bottomLeftCoordinate);
-            }
-            else
-            {
-                // WIN / LOSE CONDITION!!!!
-                Debug.LogError("YOU LOSE YOU LOSE YOU LOSE");
-            }
-        }
 
 
         // Do gravity tick check.
@@ -813,8 +834,11 @@ public class GridController : MonoBehaviour
 
     private void MakeFuguPairFallOneCell()
     {
-        PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate + Vector2Int.down);
-        PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + Vector2Int.down);
+        if (CanMoveFuguPairDown())
+        {
+            PlaceFuguInGrid(ActiveFreefallPair.primary, ActiveFreefallPair.primary.bottomLeftCoordinate + Vector2Int.down);
+            PlaceFuguInGrid(ActiveFreefallPair.secondary, ActiveFreefallPair.secondary.bottomLeftCoordinate + Vector2Int.down);
+        }
     }
 
     private void ClearPreviousFuguPosition(FuguController fugu, Vector2Int bottomLeftCoordinate)
@@ -858,6 +882,8 @@ public class GridController : MonoBehaviour
         freeFallTickPeriod = 99999f;
 
         yield return new WaitForSeconds(FuguLandingDelay);
+        sfxManager.PlayMoveSFX();
+
         // Reset the tick period back.
         freeFallTickPeriod = temp;
 
@@ -875,11 +901,7 @@ public class GridController : MonoBehaviour
     public float FugusQuickFallStepDelay = 0.1f;
     IEnumerator FugusQuickFallStep()
     {
-        List<FuguController> allFugus = new List<FuguController>();
-        foreach(var f in fuguDict)
-        {
-            allFugus.Add(f.Value);
-        }
+        List<FuguController> allFugus = GetAllFugusInGrid();
 
         // Sort all the fugus by height. Lowest first.
         allFugus.Sort(delegate (FuguController f1, FuguController f2) {
@@ -892,20 +914,25 @@ public class GridController : MonoBehaviour
 
         foreach (FuguController fugu in allFugus)
         {
-            List<Vector2Int> belowCells = new List<Vector2Int>();
+            List<Vector2Int> belowCells = fugu.GetBelowCells();
+            bool canFuguFall = true;
             foreach (Vector2Int belowCell in belowCells)
             {
                 // OOB, noop
                 if (isOOB(belowCell))
                 {
-                    continue;
+                    canFuguFall = false;
+                    break;
                 }
                 // something blocking, noop
                 if (grid[belowCell.x][belowCell.y] != -1)
                 {
-                    continue;
+                    canFuguFall = false;
+                    break;
                 }
-                // otherwise move down 1 cell
+            }
+            if (canFuguFall)
+            {
                 PlaceFuguInGrid(fugu, fugu.bottomLeftCoordinate + Vector2Int.down);
                 atLeastOneFell = true;
             }
@@ -914,6 +941,7 @@ public class GridController : MonoBehaviour
         // if not all fugus are at rest, do it again
         if (atLeastOneFell)
         {
+            sfxManager.PlayQuickFallSFX();
             yield return FugusQuickFallStep();
         }
         else
@@ -956,13 +984,12 @@ public class GridController : MonoBehaviour
             connectedSets.Add(connectedFugus);
         }
 
-        // Set visual connections between fugus here...
-
         yield return new WaitForSeconds(ConnectFugusStepDelay);
 
+        // Set visual connections between fugus here...
+        sfxManager.PlayMoveSFX();
+
         yield return ExplodeFugusStep(connectedSets);
-
-
     }
 
     // TODO: Finish this/get it working.
@@ -1011,7 +1038,7 @@ public class GridController : MonoBehaviour
 
     private void ExploreConnectedFugus(FuguController fugu, HashSet<int> visitedFugus, HashSet<int> connectedFugus, HashSet<int> localVisited, FuguColor color)
     {
-        // Mark a visited for future iterations.
+        // Mark as visited for future iterations.
         visitedFugus.Add(fugu.id);
         // If we enter here, we add it to the current connected-by-color set.
         connectedFugus.Add(fugu.id);
@@ -1056,6 +1083,8 @@ public class GridController : MonoBehaviour
     IEnumerator ExplodeFugusStep(List<HashSet<int>> connectedSets)
     {
         bool isOneOrMoreExplosions = false;
+        List<IEnumerator> fuguExplosions = new List<IEnumerator>();
+
         foreach(HashSet<int> fuguIDs in connectedSets)
         {
             if (fuguIDs.Count < 4)
@@ -1071,11 +1100,22 @@ public class GridController : MonoBehaviour
                 {
                     FuguController fugu = fuguDict[id];
                     RemoveFuguFromGrid(fugu);
+                    fuguExplosions.Add(ExplodeIndividualFugu(fugu));
                 }
             }
         }
 
-        yield return new WaitForSeconds(ExplodeFugusDelay);
+        // Run all fugu explosion coroutines.
+        for (int i = 0; i < fuguExplosions.Count; i++)
+        {
+            StartCoroutine(fuguExplosions[i]);
+        }
+        // Continue when they are finished.
+        for (int i = 0; i < fuguExplosions.Count; i++)
+        {
+            yield return fuguExplosions[i];
+        }
+
 
         // And the cycle restarts...
         // Here we need to make everything QUICKLY fall on loop until all is settled.
@@ -1086,22 +1126,46 @@ public class GridController : MonoBehaviour
         }
         else
         {
-            FuguPair nextFuguPair = fuguQueue.Dequeue();
-            ActiveFreefallPair.SetFuguPair(nextFuguPair);
-
-            isPlayerLocked = false;
+            if (fuguQueue.Count > 0)
+            {
+                FuguPair nextFuguPair = fuguQueue.Dequeue();
+                ActiveFreefallPair.SetFuguPair(nextFuguPair);
+                isPlayerLocked = false;
+            }
+            else
+            {
+                // Either the player is about to win, or the level is lost!
+            }
         }
+    }
+
+    public float BaseIndividualExplodeDelay = 0.2f;
+    IEnumerator ExplodeIndividualFugu(FuguController fugu)
+    {
+        float d = UnityEngine.Random.Range(-0.05f, 0.05f);
+
+        yield return new WaitForSeconds(BaseIndividualExplodeDelay + d);
+        // particles...
+        sfxManager.PlayExplodeSFX();
+        fugu.animator.SetTrigger("Explode");
+
+        // wait however long the animation needs...
+        yield return new WaitForSeconds(0.1f);
+        Destroy(fugu.gameObject);
     }
 
     void RemoveFuguFromGrid(FuguController fugu)
     {
         fuguDict.Remove(fugu.id);
-        fugu.ExplodeSelf();
+        fugu.PreExplode();
+        ////fugu.ExplodeSelf(); // animation
+        sfxManager.PlayPreExplodeSFX();
+        ClearPreviousFuguPosition(fugu, fugu.bottomLeftCoordinate);
     }
 
 
     // Debugging fugu / cell tool.
-    private bool enableDebuggingGrid = false;
+    private bool enableDebuggingGrid = true;
     private List<List<GameObject>> debuggingGrid;
     void InitDebuggingGrid()
     {

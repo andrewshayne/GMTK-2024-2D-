@@ -197,21 +197,19 @@ public class FuguController : MonoBehaviour
 
     }
 
-    public void ExplodeSelf()
+    public void DetachFromPair()
     {
-        StartCoroutine(ExplodeSelfCoroutine());
+        animator.SetTrigger("Detach");
     }
 
-
-    private float ExplosionDelay = 0.8f;
-    IEnumerator ExplodeSelfCoroutine()
+    public void PreExplode()
     {
-        yield return new WaitForSeconds(ExplosionDelay);
+        animator.SetTrigger("PreExplode");
+    }
 
-        // particles...
-
-        yield return new WaitForSeconds(ExplosionDelay);
-        Destroy(gameObject);
+    public void ExplodeSelf()
+    {
+        animator.SetTrigger("Explode");
     }
 
     public Vector2Int GetCenterCoord()
