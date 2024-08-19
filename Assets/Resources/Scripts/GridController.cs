@@ -269,6 +269,16 @@ public class GridController : MonoBehaviour
 
     private int currentID = 0;
     private Vector2Int defaultSpawnPosition = new Vector2Int(6, 15);
+    private Vector2Int[] fuguQueuePositions = {
+        new Vector2Int(0, 3),
+        new Vector2Int(1, 3),
+        new Vector2Int(0, 2),
+        new Vector2Int(1, 2),
+        new Vector2Int(0, 1),
+        new Vector2Int(1, 1),
+        new Vector2Int(0, 0),
+        new Vector2Int(1, 0),
+    };
 
     private float gravityTickTimer = 0.0f;
     public float freeFallTickPeriod = 2.0f;
@@ -322,6 +332,8 @@ public class GridController : MonoBehaviour
         ActiveFreefallPair.SetFuguPair(fuguPair);
         PlaceFuguInGrid(fuguPair.primary, fuguPair.primary.bottomLeftCoordinate);
         PlaceFuguInGrid(fuguPair.secondary, fuguPair.secondary.bottomLeftCoordinate);
+
+        RenderFuguQueue();
     }
 
     void InitGrid()
@@ -756,6 +768,9 @@ public class GridController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Lerp each fugu pair to their position
+
+
         DebuggingRenderGrid();
 
         if (isPlayerLocked)
@@ -863,15 +878,20 @@ public class GridController : MonoBehaviour
 
         // Set the fugu's new position and scale.
         fugu.SetGridPosition(bottomLeftCoordinate);
-        fugu.SetScaleVisuals();
-        fugu.SetColorVisuals();
-        fugu.SetRotationVisuals();
+        SetFuguVisuals(fugu);
 
         List<Vector2Int> currentCells = fugu.GetAllCells();
         for (int i = 0; i < currentCells.Count; i++)
         {
             grid[currentCells[i].x][currentCells[i].y] = fugu.id;
         }
+    }
+
+    private void SetFuguVisuals(FuguController fugu)
+    {
+        fugu.SetScaleVisuals();
+        fugu.SetColorVisuals();
+        fugu.SetRotationVisuals();
     }
 
     public float FuguLandingDelay = 0.3f;
@@ -1131,6 +1151,9 @@ public class GridController : MonoBehaviour
                 FuguPair nextFuguPair = fuguQueue.Dequeue();
                 ActiveFreefallPair.SetFuguPair(nextFuguPair);
                 isPlayerLocked = false;
+
+                // Update and render the queue!
+                RenderFuguQueue();
             }
             else
             {
@@ -1139,10 +1162,42 @@ public class GridController : MonoBehaviour
         }
     }
 
-    public float BaseIndividualExplodeDelay = 0.2f;
+    private void RenderFuguQueue()
+    {
+        // start by directly setting position...
+
+        int i = 0;
+        foreach (FuguPair fuguPair in fuguQueue)
+        {
+            SetPairQueuePosition(fuguPair, fuguQueuePositions[i]);
+
+            StartCoroutine(MoveFuguToQueuePosition(fuguPair));
+            i++;
+        }
+    }
+
+    void SetPairQueuePosition(FuguPair fuguPair, Vector2 pos)
+    {
+        float scalar = 3f;
+        Vector2 offset = new Vector2(-8f, 13f);
+
+        SetFuguVisuals(fuguPair.primary);
+        SetFuguVisuals(fuguPair.secondary);
+
+        Vector2 endPos = (pos * scalar) + offset;
+        fuguPair.primary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, endPos + (Vector2.down * 2));
+        fuguPair.secondary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, endPos);
+    }
+
+    IEnumerator MoveFuguToQueuePosition(FuguPair fuguPair)
+    {
+        yield return new WaitForSeconds(1);
+    }
+
+    private float BaseIndividualExplodeDelay = 2.0f;
     IEnumerator ExplodeIndividualFugu(FuguController fugu)
     {
-        float d = UnityEngine.Random.Range(-0.05f, 0.05f);
+        float d = UnityEngine.Random.Range(-0.1f, 0.1f);
 
         yield return new WaitForSeconds(BaseIndividualExplodeDelay + d);
         // particles...
@@ -1165,7 +1220,7 @@ public class GridController : MonoBehaviour
 
 
     // Debugging fugu / cell tool.
-    private bool enableDebuggingGrid = true;
+    private bool enableDebuggingGrid = false;
     private List<List<GameObject>> debuggingGrid;
     void InitDebuggingGrid()
     {

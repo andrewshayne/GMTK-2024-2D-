@@ -218,4 +218,21 @@ public class FuguController : MonoBehaviour
         int y = (2 * bottomLeftCoordinate.y + (int)scale - 1) / 2;
         return new Vector2Int(x, y);
     }
+
+    public void MoveToQueuePosition(Vector2 start, Vector2 end)
+    {
+        StartCoroutine(MoveTowardQueuePos(start, end));
+    }
+
+    float timeToMove = 1f;
+    IEnumerator MoveTowardQueuePos(Vector2 start, Vector2 end)
+    {
+        float t = 0;
+        while (t < 1)
+        {
+            transform.localPosition = Vector2.Lerp(start, end, t);
+            t = t + Time.deltaTime / timeToMove;
+            yield return new WaitForEndOfFrame();
+        }
+    }
 }

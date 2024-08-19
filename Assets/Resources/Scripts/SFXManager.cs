@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class SFXManager : MonoBehaviour
 {
-    public AudioSource source;
+    public AudioSource musicSource;
+    public AudioSource sfxSource;
 
     public AudioClip moveSFX;
     public AudioClip quickFallSFX;
@@ -24,28 +25,32 @@ public class SFXManager : MonoBehaviour
         
     }
 
+    private void Awake()
+    {
+    }
+
     public void PlayMoveSFX()
     {
-        source.PlayOneShot(moveSFX, 0.2f);
+        sfxSource.PlayOneShot(moveSFX, 0.2f);
     }
 
     public void PlayQuickFallSFX()
     {
-        source.PlayOneShot(quickFallSFX, 0.5f);
+        sfxSource.PlayOneShot(quickFallSFX, 0.5f);
     }
 
     public void PlayRotateSFX()
     {
-        source.PlayOneShot(rotateSFX, 0.2f);
+        sfxSource.PlayOneShot(rotateSFX, 0.2f);
     }
 
     public void PlayPreExplodeSFX()
     {
-        source.PlayOneShot(preExplodeSFX, 0.1f);
+        sfxSource.PlayOneShot(preExplodeSFX, 0.1f);
     }
 
     public void PlayExplodeSFX()
     {
-        source.PlayOneShot(explodeSFX, 1.0f);
+        sfxSource.PlayOneShot(explodeSFX, 1.0f);
     }
 }
