@@ -669,11 +669,25 @@ public class GridController : MonoBehaviour
         }
 
         FuguPair fuguPair = new FuguPair();
+
+        FuguController GetFuguFromAnyDict(int id)
+        {
+            if (fuguDict.ContainsKey(id))
+            {
+                return fuguDict[id];
+            } else
+            {
+                FuguController fugu = fuguMorgue[id];
+                fuguDict.Add(id, fugu);
+                fuguMorgue.Remove(id);
+                return fugu;
+            }
+        }
         
         // Restore primary fugu
         if (!state.PrimaryFugu.IsUnityNull())
         {
-            fuguPair.primary = fuguDict[state.PrimaryFugu.id];
+            fuguPair.primary = GetFuguFromAnyDict(state.PrimaryFugu.id);
             fuguPair.primary.scale = state.PrimaryFugu.scale;
             fuguPair.primary.relativePosition = state.PrimaryFugu.relativePosition;
             fuguPair.primary.bottomLeftCoordinate = state.PrimaryFugu.bottomLeftCoord;
@@ -685,7 +699,7 @@ public class GridController : MonoBehaviour
         // Restore secondary fugu
         if (!state.SecondaryFugu.IsUnityNull())
         {
-            fuguPair.secondary = fuguDict[state.SecondaryFugu.id];
+            fuguPair.secondary = GetFuguFromAnyDict(state.SecondaryFugu.id);
             fuguPair.secondary.scale = state.SecondaryFugu.scale;
             fuguPair.secondary.relativePosition = state.SecondaryFugu.relativePosition;
             fuguPair.secondary.bottomLeftCoordinate = state.SecondaryFugu.bottomLeftCoord;
