@@ -8,6 +8,7 @@ using UnityEngine.UIElements;
 using System.Linq;
 using UnityEngine.Purchasing;
 using Unity.VisualScripting;
+using static GridState;
 
 
 
@@ -319,6 +320,7 @@ public class GridController : MonoBehaviour
 
     public LinkedList<FuguPair> fuguQueue = new LinkedList<FuguPair>();
     public Dictionary<int, FuguController> fuguDict = new Dictionary<int, FuguController>();
+    public Dictionary<int, FuguController> fuguMorgue = new Dictionary<int, FuguController>();
 
     public SFXManager sfxManager;
 
@@ -347,6 +349,7 @@ public class GridController : MonoBehaviour
         fuguQueue.Clear();
         // Clear the dictionary.
         fuguDict.Clear();
+        fuguMorgue.Clear();
         // Clear history
         History.Clear();
     }
@@ -564,7 +567,7 @@ public class GridController : MonoBehaviour
 
         // Copy grid
         int[,] copyGrid = new int[GRID_SIZE.x,GRID_SIZE.y];
-        Dictionary<int, GridState.FuguState> fugusInGrid = new Dictionary<int, GridState.FuguState>();
+        Dictionary<int, FuguState> fugusInGrid = new Dictionary<int, FuguState>();
         
         for (int i = 0; i < GRID_SIZE.x; i++)
         {
@@ -594,6 +597,7 @@ public class GridController : MonoBehaviour
     public void PopGridState()
     {
         GridState state = History.Pop();
+        HashSet<int> previousActiveFugus = new HashSet<int>();
 
         // Copy over the grid
         for (int i = 0; i < GRID_SIZE.x; i++)
@@ -601,6 +605,62 @@ public class GridController : MonoBehaviour
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
                 grid[i,j] = state.grid[i,j];
+                if (grid[i,j] != -1)
+                {
+                    previousActiveFugus.Add(grid[i, j]);
+                }
+            }
+        }
+
+        // Restore all fugus in morgue
+        List<int> idsToActivate = new List<int>();
+        foreach (int id in fuguMorgue.Keys)
+        {
+            if (state.fugusInGrid.ContainsKey(id))
+            {
+                FuguState fuguState = state.fugusInGrid[id];
+                FuguController fugu = fuguMorgue[fuguState.id];
+
+                fugu.scale = fuguState.scale;
+                fugu.relativePosition = fuguState.relativePosition;
+                fugu.bottomLeftCoordinate = fuguState.bottomLeftCoord;
+                idsToActivate.Add(id);
+            }
+        }
+        foreach (int id in idsToActivate)
+        {
+            fuguMorgue[id].gameObject.SetActive(true);
+            fuguDict.Add(id, fuguMorgue[id]);
+            fuguMorgue.Remove(id);
+            fuguDict[id].Draw();
+        }
+
+        // Restore all fugus in grid
+        List<int> idsToDeactivate = new List<int>();
+        foreach (int id in fuguDict.Keys)
+        {
+            if (state.fugusInGrid.ContainsKey(id))
+            {
+                FuguState fuguState = state.fugusInGrid[id];
+                FuguController fugu = fuguDict[fuguState.id];
+                fugu.scale = fuguState.scale;
+                fugu.relativePosition = fuguState.relativePosition;
+                fugu.bottomLeftCoordinate = fuguState.bottomLeftCoord;
+                fugu.Draw();
+            }
+            else
+            {
+                idsToDeactivate.Add(id);
+            }
+        }
+
+        foreach (int id in idsToDeactivate)
+        {
+            if (id != state.PrimaryFugu.id && id != state.SecondaryFugu.id)
+            {
+                fuguDict[id].gameObject.SetActive(false);
+                fuguMorgue.Add(id, fuguDict[id]);
+                fuguDict.Remove(id);
             }
         }
 
@@ -614,6 +674,8 @@ public class GridController : MonoBehaviour
             fuguPair.primary.relativePosition = state.PrimaryFugu.relativePosition;
             fuguPair.primary.bottomLeftCoordinate = state.PrimaryFugu.bottomLeftCoord;
             fuguPair.primary.gameObject.SetActive(true);
+
+            fuguPair.primary.Draw();
         }
 
         // Restore secondary fugu
@@ -624,23 +686,12 @@ public class GridController : MonoBehaviour
             fuguPair.secondary.relativePosition = state.SecondaryFugu.relativePosition;
             fuguPair.secondary.bottomLeftCoordinate = state.SecondaryFugu.bottomLeftCoord;
             fuguPair.secondary.gameObject.SetActive(true);
+
+            fuguPair.secondary.Draw();
         }
 
         // Add active fugu pair to front of fuguQueue
         fuguQueue.AddFirst(fuguPair);
-
-        // Restore all fugus in grid
-        foreach (GridState.FuguState fuguState in state.fugusInGrid.Values)
-        {
-            FuguController fugu = fuguDict[fuguState.id];
-            fugu.scale = fuguState.scale;
-            fugu.relativePosition = fuguState.relativePosition;
-            fugu.bottomLeftCoordinate = fuguState.bottomLeftCoord;
-            if (!fugu.gameObject.activeInHierarchy)
-            {
-                fuguDict[fuguState.id].gameObject.SetActive(true);
-            }
-        }
     }
 
     // Call this function if you just need to wipe the grid of a specific fugu id.
@@ -687,7 +738,10 @@ public class GridController : MonoBehaviour
                 }
                 break;
             case ActionInput.Undo:
-                PopGridState();
+                if (History.Count() > 0)
+                {
+                    PopGridState();
+                }
                 break;
             case ActionInput.InflatePrimary:
                 // Handled when getting the action. Empty case.
@@ -1336,11 +1390,13 @@ public class GridController : MonoBehaviour
 
         // wait however long the animation needs...
         yield return new WaitForSeconds(0.1f);
-        Destroy(fugu.gameObject);
+        fugu.gameObject.SetActive(false);
+        //Destroy(fugu.gameObject);
     }
 
     void RemoveFuguFromGrid(FuguController fugu)
     {
+        fuguMorgue.Add(fugu.id, fugu);
         fuguDict.Remove(fugu.id);
         fugu.PreExplode();
         ////fugu.ExplodeSelf(); // animation
