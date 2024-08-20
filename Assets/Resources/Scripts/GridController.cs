@@ -41,23 +41,22 @@ public struct FuguPair
     public FuguController primary;
     public FuguController secondary;
 
-    public FuguPair(FuguColor primaryColor, FuguColor secondaryColor, int id1, int id2, Vector2Int position, GameObject FuguPrefab)
+    public FuguPair(FuguColor primaryColor, FuguColor secondaryColor, Vector2Int position, GameObject FuguPrefab)
     {
         GameObject primaryObj = GameObject.Instantiate(FuguPrefab);
         GameObject secondaryObj = GameObject.Instantiate(FuguPrefab);
         primary = primaryObj.GetComponent<FuguController>();
         secondary = secondaryObj.GetComponent<FuguController>();
 
-        SetUpFuguController(primary, true, id1, id2, position + (Vector2Int.down * 2), primaryColor);
-        SetUpFuguController(secondary, false, id2, id1, position, secondaryColor);
+        SetUpFuguController(primary, true, position + (Vector2Int.down * 2), primaryColor);
+        SetUpFuguController(secondary, false, position, secondaryColor);
     }
 
-    public void SetUpFuguController(FuguController fugu, bool isPrimary, int id, int partnerId, Vector2Int topLeftCoordinate, FuguColor color)
+    public void SetUpFuguController(FuguController fugu, bool isPrimary, Vector2Int topLeftCoordinate, FuguColor color)
     {
         fugu.isPrimary = isPrimary;
-        fugu.id = id;
-        fugu.partnerId = partnerId;
-        fugu.bottomLeftCoordinate = topLeftCoordinate + (Vector2Int.down * 2);
+        fugu.id = -2; // This should ALWAYS get overwritten when adding fugu to puzzle.
+        fugu.bottomLeftCoordinate = topLeftCoordinate + (Vector2Int.down * 1); // Offset = 1 because 2x2 fugu's top left corner is 1 away from its bottom left corner.
         fugu.color = color;
         fugu.scale = FuguScale.Medium;
 
@@ -80,6 +79,13 @@ public struct FuguPair
     {
         this.primary = fuguPair.primary;
         this.secondary = fuguPair.secondary;
+
+        // make sure local scale is set back to 1
+        this.primary.transform.localScale = Vector2.one;
+        this.secondary.transform.localScale = Vector2.one;
+
+        this.primary.transform.SetParent(null);
+        this.secondary.transform.SetParent(null);
     }
 
     public void Disconnect()
@@ -300,14 +306,10 @@ public class GridController : MonoBehaviour
     private int currentID = 0;
     private Vector2Int defaultSpawnPosition = new Vector2Int(6, 15);
     private Vector2Int[] fuguQueuePositions = {
-        new Vector2Int(0, 3),
-        new Vector2Int(1, 3),
-        new Vector2Int(0, 2),
-        new Vector2Int(1, 2),
-        new Vector2Int(0, 1),
-        new Vector2Int(1, 1),
-        new Vector2Int(0, 0),
-        new Vector2Int(1, 0),
+        new Vector2Int(0, 0), new Vector2Int(1, 0),
+        new Vector2Int(0, -1), new Vector2Int(1, -1),
+        new Vector2Int(0, -2), new Vector2Int(1, -2),
+        new Vector2Int(0, -3), new Vector2Int(1, -3),
     };
 
     private float gravityTickTimer = 0.0f;
@@ -326,6 +328,10 @@ public class GridController : MonoBehaviour
 
     public GameObject FuguPrefab;
     public GameObject DebuggingSquare;
+
+    public GameObject RenderQueuePanel;
+    public Camera camera;
+
     
     public Stack<GridState> History = new Stack<GridState>();
 
@@ -357,6 +363,8 @@ public class GridController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        camera.pixelRect = new Rect(0, 0, 1920, 1080);
+
         // load grid from file or something...
         InitGrid();
         InitQueue();
@@ -373,7 +381,7 @@ public class GridController : MonoBehaviour
         PlaceFuguInGrid(fuguPair.primary, fuguPair.primary.bottomLeftCoordinate);
         PlaceFuguInGrid(fuguPair.secondary, fuguPair.secondary.bottomLeftCoordinate);
 
-        RenderFuguQueue();
+        RenderFuguQueueAtStart();
     }
 
     void InitGrid()
@@ -390,36 +398,31 @@ public class GridController : MonoBehaviour
 
     void InitQueue()
     {
-        int id1 = GetUniqueID();
-        int id2 = GetUniqueID();
-        int id3 = GetUniqueID();
-        int id4 = GetUniqueID();
+        FuguPair a = new FuguPair(FuguColor.Red, FuguColor.Green, defaultSpawnPosition, FuguPrefab);
+        FuguPair b = new FuguPair(FuguColor.Red, FuguColor.Cyan, defaultSpawnPosition, FuguPrefab);
+        FuguPair c = new FuguPair(FuguColor.Red, FuguColor.Pink, defaultSpawnPosition, FuguPrefab);
+        FuguPair d = new FuguPair(FuguColor.Red, FuguColor.Purple, defaultSpawnPosition, FuguPrefab);
+        FuguPair e = new FuguPair(FuguColor.Yellow, FuguColor.Cyan, defaultSpawnPosition, FuguPrefab);
 
-        int id5 = GetUniqueID();
-        int id6 = GetUniqueID();
-        int id7 = GetUniqueID();
-        int id8 = GetUniqueID();
+        AddFuguPairToPuzzle(a);
+        AddFuguPairToPuzzle(b);
+        AddFuguPairToPuzzle(c);
+        AddFuguPairToPuzzle(d);
+        AddFuguPairToPuzzle(e);
+    }
 
-        int id9 = GetUniqueID();
-        int id10 = GetUniqueID();
+    void AddFuguPairToPuzzle(FuguPair fuguPair)
+    {
+        // Set the id
+        fuguPair.primary.id = GetUniqueID();
+        fuguPair.secondary.id = GetUniqueID();
 
-        FuguPair a = new FuguPair(FuguColor.Red, FuguColor.Green, id1, id2, defaultSpawnPosition, FuguPrefab);
-        FuguPair b = new FuguPair(FuguColor.Red, FuguColor.Cyan, id3, id4, defaultSpawnPosition, FuguPrefab);
-        FuguPair c = new FuguPair(FuguColor.Red, FuguColor.Pink, id5, id6, defaultSpawnPosition, FuguPrefab);
-        FuguPair d = new FuguPair(FuguColor.Red, FuguColor.Purple, id7, id8, defaultSpawnPosition, FuguPrefab);
-        FuguPair e = new FuguPair(FuguColor.Yellow, FuguColor.Cyan, id9, id10, defaultSpawnPosition, FuguPrefab);
+        // Set queue panel as parent
+        fuguPair.primary.transform.SetParent(RenderQueuePanel.transform);
+        fuguPair.secondary.transform.SetParent(RenderQueuePanel.transform);
 
-        AddPairToDict(a);
-        AddPairToDict(b);
-        AddPairToDict(c);
-        AddPairToDict(d);
-        AddPairToDict(e);
-
-        fuguQueue.AddLast(a);
-        fuguQueue.AddLast(b);
-        fuguQueue.AddLast(c);
-        fuguQueue.AddLast(d);
-        fuguQueue.AddLast(e);
+        AddPairToDict(fuguPair);
+        fuguQueue.AddLast(fuguPair);
     }
 
     public List<FuguController> GetAllFugusInGrid()
@@ -650,7 +653,8 @@ public class GridController : MonoBehaviour
             }
             else
             {
-                idsToDeactivate.Add(id);
+                // WIP
+                //idsToDeactivate.Add(id);
             }
         }
 
@@ -952,7 +956,6 @@ public class GridController : MonoBehaviour
     {
         // Lerp each fugu pair to their position
 
-
         DebuggingRenderGrid();
 
         if (isPlayerLocked)
@@ -986,10 +989,6 @@ public class GridController : MonoBehaviour
 
             gravityTickTimer = 0.0f;
         }
-
-
-        ////StartCoroutine();
-
     }
 
     private bool IsFuguPairLanded()
@@ -1336,6 +1335,8 @@ public class GridController : MonoBehaviour
                 SaveGridState(nextFuguPair);
                 isPlayerLocked = false;
 
+                sfxManager.PlayPreExplodeSFX();
+
                 // Update and render the queue!
                 RenderFuguQueue();
             }
@@ -1346,6 +1347,17 @@ public class GridController : MonoBehaviour
         }
     }
 
+    private void RenderFuguQueueAtStart()
+    {
+        // start by directly setting position...
+
+        int i = 0;
+        foreach (FuguPair fuguPair in fuguQueue)
+        {
+            SetPairQueuePosition(fuguPair, fuguQueuePositions[i], true);
+            i++;
+        }
+    }
     private void RenderFuguQueue()
     {
         // start by directly setting position...
@@ -1353,29 +1365,57 @@ public class GridController : MonoBehaviour
         int i = 0;
         foreach (FuguPair fuguPair in fuguQueue)
         {
-            SetPairQueuePosition(fuguPair, fuguQueuePositions[i]);
-
-            StartCoroutine(MoveFuguToQueuePosition(fuguPair));
+            SetPairQueuePosition(fuguPair, fuguQueuePositions[i], false);
             i++;
         }
     }
 
-    void SetPairQueuePosition(FuguPair fuguPair, Vector2 pos)
+    public float leftMargin = 0f;
+    public float topMargin = 0f;
+    public float xGap = 0f;
+    public float yGap = 0f;
+
+    void SetPairQueuePosition(FuguPair fuguPair, Vector2 pos, bool isStart)
     {
+
         float scalar = 3f;
-        Vector2 offset = new Vector2(-8f, 13f);
+        Vector2 topLeftAnchorPosition = new Vector2(-8f, 13f);
 
         SetFuguVisuals(fuguPair.primary);
         SetFuguVisuals(fuguPair.secondary);
 
-        Vector2 endPos = (pos * scalar) + offset;
-        fuguPair.primary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, endPos + (Vector2.down * 2));
-        fuguPair.secondary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, endPos);
+        //Vector2 endPos = (pos * scalar) + topLeftAnchorPosition;
+        //fuguPair.primary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, endPos + (Vector2.down * 2));
+        //fuguPair.secondary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, endPos);
+
+
+        // Also shrink them a little to better fit in the UI
+        // fuguPair.primary.transform.localScale = Vector2.one * 0.8f;
+        // fuguPair.secondary.transform.localScale = Vector2.one * 0.8f;
+
+        float fuguScalar = 0.8f;
+        Vector2 upperPos = GetCalculatedQueuePosition(pos);
+        Vector2 lowerPos = upperPos + Vector2.down * 2f * fuguScalar; // 0.8 is the queue fugu scale
+
+        if (isStart)
+        {
+            fuguPair.primary.transform.localPosition = lowerPos;
+            fuguPair.secondary.transform.localPosition = upperPos;
+        }
+        else
+        {
+            fuguPair.primary.MoveToQueuePosition(fuguPair.primary.transform.localPosition, lowerPos);
+            fuguPair.secondary.MoveToQueuePosition(fuguPair.secondary.transform.localPosition, upperPos);
+        }
+
+        fuguPair.primary.transform.localScale = Vector2.one * fuguScalar;
+        fuguPair.secondary.transform.localScale = Vector2.one * fuguScalar;
     }
 
-    IEnumerator MoveFuguToQueuePosition(FuguPair fuguPair)
+    Vector2 GetCalculatedQueuePosition(Vector2 pos)
     {
-        yield return new WaitForSeconds(1);
+        Vector2 calcPos = (Vector2.right * leftMargin) + (Vector2.down * topMargin) + pos + (Vector2.right * xGap * pos.x) + (Vector2.up * yGap * pos.y);
+        return calcPos;
     }
 
     private float BaseIndividualExplodeDelay = 2.0f;
@@ -1386,7 +1426,7 @@ public class GridController : MonoBehaviour
         yield return new WaitForSeconds(BaseIndividualExplodeDelay + d);
         // particles...
         sfxManager.PlayExplodeSFX();
-        fugu.animator.SetTrigger("Explode");
+        fugu.ExplodeSelf();
 
         // wait however long the animation needs...
         yield return new WaitForSeconds(0.1f);
