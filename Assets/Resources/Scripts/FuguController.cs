@@ -209,6 +209,7 @@ public class FuguController : MonoBehaviour
 
     public void ExplodeSelf()
     {
+        transform.GetChild(0).GetComponent<SpriteRenderer>().color = Color.white;
         animator.SetTrigger("Explode");
     }
 
@@ -224,7 +225,7 @@ public class FuguController : MonoBehaviour
         StartCoroutine(MoveTowardQueuePos(start, end));
     }
 
-    float timeToMove = 1f;
+    float timeToMove = 0.5f;
     IEnumerator MoveTowardQueuePos(Vector2 start, Vector2 end)
     {
         float t = 0;

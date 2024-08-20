@@ -10,6 +10,7 @@ public class SFXManager : MonoBehaviour
     public AudioClip moveSFX;
     public AudioClip quickFallSFX;
     public AudioClip rotateSFX;
+    public AudioClip inflateSFX;
     public AudioClip preExplodeSFX;
     public AudioClip explodeSFX;
 
@@ -42,6 +43,11 @@ public class SFXManager : MonoBehaviour
     public void PlayRotateSFX()
     {
         sfxSource.PlayOneShot(rotateSFX, 0.2f);
+    }
+
+    public void PlayInflateSFX()
+    {
+        sfxSource.PlayOneShot(inflateSFX, 0.2f);
     }
 
     public void PlayPreExplodeSFX()
