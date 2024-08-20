@@ -1000,7 +1000,7 @@ public class GridController : MonoBehaviour
         List<FuguController> allFugus = GetAllFugusInGrid();
 
         // Sort all active fugus by height. Lowest first.
-        allActiveFugus.Sort(delegate (FuguController f1, FuguController f2) {
+        allFugus.Sort(delegate (FuguController f1, FuguController f2) {
             return f1.bottomLeftCoordinate.y.CompareTo(f1.bottomLeftCoordinate.y);
         });
 
@@ -1008,7 +1008,7 @@ public class GridController : MonoBehaviour
 
         bool atLeastOneFell = false;
 
-        foreach (FuguController fugu in allActiveFugus)
+        foreach (FuguController fugu in allFugus)
         {
             List<Vector2Int> belowCells = fugu.GetBelowCells();
             bool canFuguFall = true;
