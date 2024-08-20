@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Linq;
+using UnityEngine.Purchasing;
+using Unity.VisualScripting;
 
 
 
@@ -198,25 +200,19 @@ public struct FuguPair
 
     private KeyValuePair<Vector2Int, Vector2Int> RotateAroundPairCenter(bool isClockwise)
     {
-        //Debug.Log($"primary Scale: {primary.scale}, secondary Scale: {secondary.scale}");
         Vector2Int primaryCenter = primary.GetCenterCoord();
         Vector2Int secondaryCenter = secondary.GetCenterCoord();
         Vector2Int rotationPoint = GetCenter(primaryCenter, secondaryCenter);
         Vector2Int newPrimaryBottomLeft = RotatePointAroundPoint(rotationPoint, primary.bottomLeftCoordinate, isClockwise);
         Vector2Int newSecondaryBottomLeft = RotatePointAroundPoint(rotationPoint, secondary.bottomLeftCoordinate, isClockwise);
-        //Debug.Log($"isClockwise: {isClockwise}, primaryCenter: {primaryCenter}, secondaryCenter: {secondaryCenter}");
-        //Debug.Log($"rotationPoint: {rotationPoint}, primaryBLC: {primary.bottomLeftCoordinate}, secondaryBLC: {secondary.bottomLeftCoordinate}");
-        //Debug.Log($"newPrimaryBLC: {newPrimaryBottomLeft}, newSecondaryBLC: {newSecondaryBottomLeft}");
         return new KeyValuePair<Vector2Int, Vector2Int>(newPrimaryBottomLeft, newSecondaryBottomLeft);
     }
 
     // Updates the relative positions of the primary and secondary Fugus based on rotations
     public void UpdateFuguRelativePositions(bool isClockwise)
     {
-        //Debug.Log($"UpdateFuguRelativePositions primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
         secondary.relativePosition = RotateRelativePosition(secondary.relativePosition, isClockwise);
         primary.relativePosition = RotateRelativePosition(primary.relativePosition, isClockwise);
-        //Debug.Log($"new primary: {primary.relativePosition} secondary: {secondary.relativePosition}");
     }
 
     // Returns the relative position after the rotation
@@ -263,7 +259,7 @@ public struct FuguPair
 
 public struct  GridState
 {
-    public int[][] grid;
+    public int[,] grid;
 
     public struct FuguState
     {
@@ -272,13 +268,14 @@ public struct  GridState
         public FuguColor color;
         public FuguScale scale;
         public Vector2Int bottomLeftCoord;
+        public RelativePosition relativePosition;
     }
 
     public FuguState PrimaryFugu;
     public FuguState SecondaryFugu;
     
-    // Set of all the ids of fugus in the grid
-    public HashSet<int> fuguIdsInGrid;
+    // Dictionary of all fugus in the grid with state
+    public Dictionary<int, FuguState> fugusInGrid;
 
     public FuguState FuguToFuguState(FuguController fugu)
     {
@@ -288,6 +285,7 @@ public struct  GridState
         state.color = fugu.color;
         state.scale = fugu.scale;
         state.bottomLeftCoord = fugu.bottomLeftCoordinate;
+        state.relativePosition = fugu.relativePosition;
         return state;
     }
 }
@@ -317,9 +315,9 @@ public class GridController : MonoBehaviour
     public FuguPair ActiveFreefallPair;
 
     // grid holds fugu ids
-    public int[][] grid;
+    public int[,] grid;
 
-    public Queue<FuguPair> fuguQueue = new Queue<FuguPair>();
+    public LinkedList<FuguPair> fuguQueue = new LinkedList<FuguPair>();
     public Dictionary<int, FuguController> fuguDict = new Dictionary<int, FuguController>();
 
     public SFXManager sfxManager;
@@ -361,13 +359,14 @@ public class GridController : MonoBehaviour
         InitQueue();
 
         // Save grid state to history
-        SaveGridState();
 
         // Debugging
         InitDebuggingGrid();
 
-        FuguPair fuguPair = fuguQueue.Dequeue();
+        FuguPair fuguPair = fuguQueue.First();
+        fuguQueue.RemoveFirst();
         ActiveFreefallPair.SetFuguPair(fuguPair);
+        SaveGridState(fuguPair);
         PlaceFuguInGrid(fuguPair.primary, fuguPair.primary.bottomLeftCoordinate);
         PlaceFuguInGrid(fuguPair.secondary, fuguPair.secondary.bottomLeftCoordinate);
 
@@ -376,13 +375,12 @@ public class GridController : MonoBehaviour
 
     void InitGrid()
     {
-        grid = new int[GRID_SIZE.x][];
+        grid = new int[GRID_SIZE.x, GRID_SIZE.y];
         for (int i = 0; i < GRID_SIZE.x; i++)
         {
-            grid[i] = new int[GRID_SIZE.y];
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                grid[i][j] = -1;
+                grid[i, j] = -1;
             }
         }
     }
@@ -414,11 +412,11 @@ public class GridController : MonoBehaviour
         AddPairToDict(d);
         AddPairToDict(e);
 
-        fuguQueue.Enqueue(a);
-        fuguQueue.Enqueue(b);
-        fuguQueue.Enqueue(c);
-        fuguQueue.Enqueue(d);
-        fuguQueue.Enqueue(e);
+        fuguQueue.AddLast(a);
+        fuguQueue.AddLast(b);
+        fuguQueue.AddLast(c);
+        fuguQueue.AddLast(d);
+        fuguQueue.AddLast(e);
     }
 
     public List<FuguController> GetAllFugusInGrid()
@@ -429,11 +427,14 @@ public class GridController : MonoBehaviour
         {
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                if (grid[i][j] == -1)
+                if (grid[i, j] == -1)
                 {
                     continue;
                 }
-                ids.Add(grid[i][j]);
+                else
+                {
+                    ids.Add(grid[i, j]);
+                }
             }
         }
         foreach (int id in ids)
@@ -474,6 +475,7 @@ public class GridController : MonoBehaviour
         RotateCCW,        // Rotate pieces counter-clockwise.
         InflatePrimary,   // Inflate the fugu that was initially the upper piece. Deflate the other.
         InflateSecondary, // Inflate the fugu that was initially the lower piece. Deflate the other.
+        Undo,             // Undo move
     }
 
     ActionInput GetPlayerActionInput()
@@ -485,6 +487,10 @@ public class GridController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Q))
         {
             return ActionInput.RotateCCW;
+        }
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            return ActionInput.Undo;
         }
 
         // I know this is horrible. But trust.
@@ -552,42 +558,89 @@ public class GridController : MonoBehaviour
         return ActionInput.NoAction;
     }
 
-    public void SaveGridState(FuguPair? fuguPair = null)
+    public void SaveGridState(FuguPair fuguPair)
     {
         GridState state = new GridState();
 
         // Copy grid
-        int[][] copyGrid = new int[GRID_SIZE.x][];
-        HashSet<int> fugusInGrid = new HashSet<int>();
+        int[,] copyGrid = new int[GRID_SIZE.x,GRID_SIZE.y];
+        Dictionary<int, GridState.FuguState> fugusInGrid = new Dictionary<int, GridState.FuguState>();
         
         for (int i = 0; i < GRID_SIZE.x; i++)
         {
-            int[] row = new int[GRID_SIZE.y];
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                int fuguId = grid[i][j];
-                row[j] = fuguId;
-                if (fuguId != -1)
+                int fuguId = grid[i,j];
+                if (fuguId != -1 && !fugusInGrid.ContainsKey(fuguId))
                 {
-                    fugusInGrid.Add(fuguId);
+                    fugusInGrid.Add(fuguId, state.FuguToFuguState(fuguDict[fuguId]));
                 }
+                copyGrid[i, j] = fuguId;
             }
-            copyGrid[i] = row;
         }
         state.grid = copyGrid;
 
-        // Fugu ids in grid
-        state.fuguIdsInGrid = fugusInGrid;
+        // Fugu states of the ones in the grid
+        state.fugusInGrid = fugusInGrid;
 
         // Save active fugu pair
-        if (fuguPair != null)
-        {
-            state.PrimaryFugu = state.FuguToFuguState(fuguPair.Value.primary);
-            state.SecondaryFugu = state.FuguToFuguState(fuguPair.Value.secondary);
-        }
+        state.PrimaryFugu = state.FuguToFuguState(fuguPair.primary);
+        state.SecondaryFugu = state.FuguToFuguState(fuguPair.secondary);
 
         // Push to the history stack
         History.Push(state);
+    }
+
+    public void PopGridState()
+    {
+        GridState state = History.Pop();
+
+        // Copy over the grid
+        for (int i = 0; i < GRID_SIZE.x; i++)
+        {
+            for (int j = 0; j < GRID_SIZE.y; j++)
+            {
+                grid[i,j] = state.grid[i,j];
+            }
+        }
+
+        FuguPair fuguPair = new FuguPair();
+        
+        // Restore primary fugu
+        if (!state.PrimaryFugu.IsUnityNull())
+        {
+            fuguPair.primary = fuguDict[state.PrimaryFugu.id];
+            fuguPair.primary.scale = state.PrimaryFugu.scale;
+            fuguPair.primary.relativePosition = state.PrimaryFugu.relativePosition;
+            fuguPair.primary.bottomLeftCoordinate = state.PrimaryFugu.bottomLeftCoord;
+            fuguPair.primary.gameObject.SetActive(true);
+        }
+
+        // Restore secondary fugu
+        if (!state.SecondaryFugu.IsUnityNull())
+        {
+            fuguPair.secondary = fuguDict[state.SecondaryFugu.id];
+            fuguPair.secondary.scale = state.SecondaryFugu.scale;
+            fuguPair.secondary.relativePosition = state.SecondaryFugu.relativePosition;
+            fuguPair.secondary.bottomLeftCoordinate = state.SecondaryFugu.bottomLeftCoord;
+            fuguPair.secondary.gameObject.SetActive(true);
+        }
+
+        // Add active fugu pair to front of fuguQueue
+        fuguQueue.AddFirst(fuguPair);
+
+        // Restore all fugus in grid
+        foreach (GridState.FuguState fuguState in state.fugusInGrid.Values)
+        {
+            FuguController fugu = fuguDict[fuguState.id];
+            fugu.scale = fuguState.scale;
+            fugu.relativePosition = fuguState.relativePosition;
+            fugu.bottomLeftCoordinate = fuguState.bottomLeftCoord;
+            if (!fugu.gameObject.activeInHierarchy)
+            {
+                fuguDict[fuguState.id].gameObject.SetActive(true);
+            }
+        }
     }
 
     // Call this function if you just need to wipe the grid of a specific fugu id.
@@ -598,9 +651,9 @@ public class GridController : MonoBehaviour
         {
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                if (grid[i][j] == id)
+                if (grid[i,j] == id)
                 {
-                    grid[i][j] = -1;
+                    grid[i,j] = -1;
                 }
             }
         }
@@ -614,9 +667,7 @@ public class GridController : MonoBehaviour
         switch (actionInput)
         {
             case ActionInput.RotateCW:
-                //Debug.Log($"CW primary coord: {ActiveFreefallPair.primary} secondary coord: {ActiveFreefallPair.secondary}");
                 KeyValuePair<Vector2Int, Vector2Int> newCWCoords = ActiveFreefallPair.Rotate(isClockwise: true);
-                //Debug.Log($"CW primary coord: {newCWCoords.Key} secondary coord: {newCWCoords.Value}");
                 if (CanMoveFuguPairToCoords(primaryBottomLeft: newCWCoords.Key, secondaryBottomLeft: newCWCoords.Value))
                 {
                     ActiveFreefallPair.UpdateFuguRelativePositions(isClockwise: true);
@@ -626,9 +677,7 @@ public class GridController : MonoBehaviour
                 }
                 break;
             case ActionInput.RotateCCW:
-                //Debug.Log($"CCW primary coord: {ActiveFreefallPair.primary} secondary coord: {ActiveFreefallPair.secondary}");
                 KeyValuePair<Vector2Int, Vector2Int> newCCWCoords = ActiveFreefallPair.Rotate(isClockwise: false);
-                //Debug.Log($"CCW after primary coord: {newCCWCoords.Key} secondary coord: {newCCWCoords.Value}");
                 if (CanMoveFuguPairToCoords(primaryBottomLeft: newCCWCoords.Key, secondaryBottomLeft: newCCWCoords.Value))
                 {
                     ActiveFreefallPair.UpdateFuguRelativePositions(isClockwise: false);
@@ -636,6 +685,9 @@ public class GridController : MonoBehaviour
                     PlaceFuguInGrid(ActiveFreefallPair.secondary, newCCWCoords.Value);
                     sfxManager.PlayRotateSFX();
                 }
+                break;
+            case ActionInput.Undo:
+                PopGridState();
                 break;
             case ActionInput.InflatePrimary:
                 // Handled when getting the action. Empty case.
@@ -710,9 +762,9 @@ public class GridController : MonoBehaviour
         {
             for (int j = primaryBottomLeft.y; j <= primaryTopRight.y; j++)
             {
-                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.primary.id && grid[i][j] != ActiveFreefallPair.secondary.id)
+                if (grid[i,j] != -1 && grid[i,j] != ActiveFreefallPair.primary.id && grid[i,j] != ActiveFreefallPair.secondary.id)
                 {
-                    Debug.Log($"FuguPair primary (id: {ActiveFreefallPair.primary.id} new coords collision with id {grid[i][j]}");
+                    Debug.Log($"FuguPair primary (id: {ActiveFreefallPair.primary.id} new coords collision with id {grid[i,j]}");
                     return false;
                 }
             }
@@ -723,9 +775,9 @@ public class GridController : MonoBehaviour
         {
             for (int j = secondaryBottomLeft.y; j <= secondaryTopRight.y; j++)
             {
-                if (grid[i][j] != -1 && grid[i][j] != ActiveFreefallPair.secondary.id && grid[i][j] != ActiveFreefallPair.primary.id)
+                if (grid[i,j] != -1 && grid[i,j] != ActiveFreefallPair.secondary.id && grid[i,j] != ActiveFreefallPair.primary.id)
                 {
-                    Debug.Log($"FuguPair secondary (id: {ActiveFreefallPair.secondary.id} new coords collision with id {grid[i][j]}");
+                    Debug.Log($"FuguPair secondary (id: {ActiveFreefallPair.secondary.id} new coords collision with id {grid[i,j]}");
                     return false;
                 }
             }
@@ -745,7 +797,7 @@ public class GridController : MonoBehaviour
                 return false;
             }
             // left cell is something other than partner fugu
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.secondary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.secondary.id)
             {
                 return false;
             }
@@ -760,7 +812,7 @@ public class GridController : MonoBehaviour
                 return false;
             }
             // left cell is something other than partner fugu
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.primary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.primary.id)
             {
                 return false;
             }
@@ -779,7 +831,7 @@ public class GridController : MonoBehaviour
                 return false;
             }
             // right cell is something other than partner fugu or -1
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.secondary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.secondary.id)
             {
                 return false;
             }
@@ -794,7 +846,7 @@ public class GridController : MonoBehaviour
                 return false;
             }
             // right cell is something other than partner fugu
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.primary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.primary.id)
             {
                 return false;
             }
@@ -815,7 +867,7 @@ public class GridController : MonoBehaviour
                 return false;
             }
             // below cell is something other than partner fugu or -1
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.secondary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.secondary.id)
             {
                 return false;
             }
@@ -830,7 +882,7 @@ public class GridController : MonoBehaviour
                 return false;
             }
             // below cell is something other than partner fugu
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.primary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.primary.id)
             {
                 return false;
             }
@@ -898,7 +950,7 @@ public class GridController : MonoBehaviour
                 return true;
             }
             // below cell is something other than partner fugu
-            if (grid[pos.x][pos.y] != -1 && grid[pos.x][pos.y] != ActiveFreefallPair.secondary.id)
+            if (grid[pos.x,pos.y] != -1 && grid[pos.x,pos.y] != ActiveFreefallPair.secondary.id)
             {
                 return true;
             }
@@ -914,7 +966,7 @@ public class GridController : MonoBehaviour
                 return true;
             }
             // below cell is something other than partner fugu
-            if (grid[pos.x][pos.y] != -1 &&grid[pos.x][pos.y] != ActiveFreefallPair.primary.id)
+            if (grid[pos.x,pos.y] != -1 &&grid[pos.x,pos.y] != ActiveFreefallPair.primary.id)
             {
                 return true;
             }
@@ -940,9 +992,9 @@ public class GridController : MonoBehaviour
         {
             // Checking if there actually previously was this fugu's id here allows us to safely
             // write other fugus to this previously occupied cell, without overriding it.
-            if (grid[previousCells[i].x][previousCells[i].y] == fugu.id)
+            if (grid[previousCells[i].x,previousCells[i].y] == fugu.id)
             {
-                grid[previousCells[i].x][previousCells[i].y] = -1;
+                grid[previousCells[i].x, previousCells[i].y] = -1;
             }
         }
     }
@@ -959,7 +1011,7 @@ public class GridController : MonoBehaviour
         List<Vector2Int> currentCells = fugu.GetAllCells();
         for (int i = 0; i < currentCells.Count; i++)
         {
-            grid[currentCells[i].x][currentCells[i].y] = fugu.id;
+            grid[currentCells[i].x,currentCells[i].y] = fugu.id;
         }
     }
 
@@ -1021,7 +1073,7 @@ public class GridController : MonoBehaviour
                     break;
                 }
                 // something blocking, noop
-                if (grid[belowCell.x][belowCell.y] != -1)
+                if (grid[belowCell.x, belowCell.y] != -1)
                 {
                     canFuguFall = false;
                     break;
@@ -1150,7 +1202,7 @@ public class GridController : MonoBehaviour
             {
                 continue;
             }
-            nextToVisit.Add(grid[pos.x][pos.y]);
+            nextToVisit.Add(grid[pos.x,pos.y]);
         }
 
         foreach (int id in nextToVisit)
@@ -1224,8 +1276,10 @@ public class GridController : MonoBehaviour
         {
             if (fuguQueue.Count > 0)
             {
-                FuguPair nextFuguPair = fuguQueue.Dequeue();
+                FuguPair nextFuguPair = fuguQueue.First();
+                fuguQueue.RemoveFirst();
                 ActiveFreefallPair.SetFuguPair(nextFuguPair);
+                SaveGridState(nextFuguPair);
                 isPlayerLocked = false;
 
                 // Update and render the queue!
@@ -1297,21 +1351,20 @@ public class GridController : MonoBehaviour
 
     // Debugging fugu / cell tool.
     private bool enableDebuggingGrid = false;
-    private List<List<GameObject>> debuggingGrid;
+    private GameObject[,] debuggingGrid;
     void InitDebuggingGrid()
     {
         if (!enableDebuggingGrid)
         {
             return;
         }
-        debuggingGrid = new List<List<GameObject>>();
+        debuggingGrid = new GameObject[GRID_SIZE.x, GRID_SIZE.y];
         for (int i = 0; i < GRID_SIZE.x; i++)
         {
-            debuggingGrid.Add(new List<GameObject>());
             for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                debuggingGrid[i].Add(GameObject.Instantiate(DebuggingSquare));
-                debuggingGrid[i][j].transform.localPosition = new Vector2(i, j) + (Vector2.one * 0.5f);
+                debuggingGrid[i,j] = GameObject.Instantiate(DebuggingSquare);
+                debuggingGrid[i,j].transform.localPosition = new Vector2(i, j) + (Vector2.one * 0.5f);
             }
         }
     }
@@ -1322,15 +1375,12 @@ public class GridController : MonoBehaviour
         {
             return;
         }
-        if (debuggingGrid.Count == GRID_SIZE.x && debuggingGrid[0].Count == GRID_SIZE.y)
+        for (int i = 0; i < GRID_SIZE.x; i++)
         {
-            for (int i = 0; i < GRID_SIZE.x; i++)
+            for (int j = 0; j < GRID_SIZE.y; j++)
             {
-                for (int j = 0; j < GRID_SIZE.y; j++)
-                {
-                    bool isActive = grid[i][j] != -1 && fuguDict[grid[i][j]].gameObject.activeInHierarchy;
-                    debuggingGrid[i][j].SetActive(isActive);
-                }
+                bool isActive = grid[i, j] != -1 && fuguDict[grid[i, j]].gameObject.activeInHierarchy;
+                debuggingGrid[i, j].SetActive(isActive);
             }
         }
     }

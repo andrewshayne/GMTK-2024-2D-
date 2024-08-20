@@ -118,6 +118,15 @@ public class FuguController : MonoBehaviour
         transform.GetChild(0).GetComponent<SpriteRenderer>().color = tint;
     }
 
+    public void Draw()
+    { 
+        SetRotationVisuals();
+        SetScaleVisuals();
+        SetColorVisuals();
+        // SetGridPositionVisuals();
+        transform.localPosition = (Vector2)bottomLeftCoordinate;
+    }
+
     // Get all the cells this fugu is currently covering.
     public List<Vector2Int> GetAllCells()
     {
