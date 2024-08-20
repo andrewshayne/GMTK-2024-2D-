@@ -222,6 +222,13 @@ public class FuguController : MonoBehaviour
         animator.SetTrigger("Explode");
     }
 
+    // For restoring an exploded fugu back into the grid.
+    public void RestoreSelf()
+    {
+        animator.SetInteger("FuguScale", (int)scale);
+        animator.SetTrigger("Restore");
+    }
+
     public Vector2Int GetCenterCoord()
     {
         int x = (2 * bottomLeftCoordinate.x + (int)scale - 1) / 2;
